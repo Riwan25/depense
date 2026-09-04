@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  ci:
+    name: Build & Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma Validate
+        run: pnpm run prisma:validate
+
+      - name: Prisma Generate
+        run: pnpm run prisma:generate
+
+      - name: Varlock Generate
+        run: pnpm run env:generate
+
+      - name: Varlock Validate (Development)
+        run: pnpm run env:validate
+
+      - name: Varlock Validate (Staging)
+        run: pnpm run env:validate -- --filter=frontend --filter=admin
+        env:
+          APP_ENV: staging
+
+      - name: Varlock Validate (Production)
+        run: pnpm run env:validate -- --filter=frontend --filter=admin
+        env:
+          APP_ENV: production
+
+      - name: Build all packages
+        run: pnpm run build
+
+      - name: Check (Format, Lint, Type Check)
+        run: pnpm run check
+
+      - name: Run tests
+        run: pnpm run test
+
+      - name: Install Playwright browsers
+        run: pnpm --filter e2e exec playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: pnpm run e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
