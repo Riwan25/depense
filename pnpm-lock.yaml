@@ -335,15 +335,24 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.13.5
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.39.0(react@19.2.6)
       react:
         specifier: 'catalog:'
         version: 19.2.6
       react-dom:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
+      recharts:
+        specifier: 3.8.1
+        version: 3.8.1(@types/react@19.2.18)(react-dom@19.2.6(react@19.2.6))(react-is@19.2.8)(react@19.2.6)(redux@5.0.1)
       shadcn:
         specifier: ^4.8.3
         version: 4.20.1(typescript@6.0.3)
+      sonner:
+        specifier: 'catalog:'
+        version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3
@@ -6888,7 +6897,7 @@ snapshots:
       immer: 11.1.18
       redux: 5.0.1
       redux-thunk: 3.1.0(redux@5.0.1)
-      reselect: 5.1.1
+      reselect: 5.3.0
     optionalDependencies:
       react: 19.2.6
       react-redux: 9.3.0(@types/react@19.2.18)(react@19.2.6)(redux@5.0.1)

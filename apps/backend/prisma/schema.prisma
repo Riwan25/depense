@@ -21,6 +21,8 @@ model User {
   banExpires    DateTime?
   sessions      Session[]
   accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
 
   @@unique([email])
   @@map("user")
@@ -75,4 +77,38 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  isPositive  Boolean
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("category")
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  description   String
+  comment       String?
+  date          DateTime
+  value         Decimal  @db.Decimal(10, 2)
+  isChequeRepas Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([userId, date])
+  @@map("transaction")
 }

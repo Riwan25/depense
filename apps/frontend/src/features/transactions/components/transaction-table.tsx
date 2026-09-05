@@ -1,0 +1,166 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Badge,
+  Button,
+  cn,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@repo/ui";
+import type { TransactionWithCategory } from "@repo/utils";
+import { Pencil, Trash2 } from "lucide-react";
+import { Fragment, useState } from "react";
+
+import { useDeleteTransaction } from "../use-transactions";
+
+interface TransactionTableProps {
+  transactions: TransactionWithCategory[];
+  onEdit: (transaction: TransactionWithCategory) => void;
+}
+
+const currencyFormatter = new Intl.NumberFormat("fr-BE", {
+  style: "currency",
+  currency: "EUR",
+});
+
+function formatSignedValue(value: number, isPositive: boolean) {
+  const signed = isPositive ? value : -value;
+  return currencyFormatter.format(signed);
+}
+
+export function TransactionTable({ transactions, onEdit }: TransactionTableProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const deleteTransaction = useDeleteTransaction();
+
+  const handleDeleteConfirm = async () => {
+    if (deleteId) {
+      await deleteTransaction.mutateAsync(deleteId);
+      setDeleteId(null);
+    }
+  };
+
+  if (transactions.length === 0) {
+    return <p className="text-muted-foreground py-8 text-center text-sm">No transactions yet.</p>;
+  }
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="w-24" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((transaction) => {
+            const isExpanded = expandedId === transaction.id;
+            return (
+              <Fragment key={transaction.id}>
+                <TableRow
+                  onClick={() =>
+                    setExpandedId(isExpanded ? null : transaction.id)
+                  }
+                  className={cn(
+                    "cursor-pointer",
+                    transaction.isChequeRepas && "bg-amber-50 dark:bg-amber-950/30",
+                  )}
+                >
+                  <TableCell>{new Date(transaction.date).toLocaleDateString("fr-BE")}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {transaction.description}
+                      {transaction.isChequeRepas && (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-400 text-amber-700 dark:text-amber-400"
+                        >
+                          Cheque repas
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {transaction.category?.description ?? (
+                      <span className="text-muted-foreground">Uncategorized</span>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right font-medium",
+                      transaction.category?.isPositive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400",
+                    )}
+                  >
+                    {formatSignedValue(transaction.value, transaction.category?.isPositive ?? false)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(transaction);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteId(transaction.id);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {isExpanded && (
+                  <TableRow className="bg-muted/30">
+                    <TableCell colSpan={5} className="text-muted-foreground text-sm">
+                      {transaction.comment || "No additional comment."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete transaction</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the transaction.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

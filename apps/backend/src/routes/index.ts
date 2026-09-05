@@ -6,7 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin, useAuth } from "@/middlewares/use-auth";
 import { useLoggerContext } from "@/middlewares/use-logger-context";
 
+import { categoriesRoutes } from "./categories";
 import { healthRoutes } from "./health";
+import { transactionsRoutes } from "./transactions";
 
 export const routes = new Hono()
   .use(useAuth)
@@ -23,6 +25,8 @@ export const routes = new Hono()
   //////////////////////////////////////////////////
   // Add routes with logging middleware applied here
   .route("/health", healthRoutes)
+  .route("/categories", categoriesRoutes)
+  .route("/transactions", transactionsRoutes)
 
   //////////////////////////////////////////////////
   // Global error handler
