@@ -7,6 +7,7 @@ import { isAdmin, useAuth } from "@/middlewares/use-auth";
 import { useLoggerContext } from "@/middlewares/use-logger-context";
 
 import { categoriesRoutes } from "./categories";
+import { categoryGroupsRoutes } from "./category-groups";
 import { healthRoutes } from "./health";
 import { transactionsRoutes } from "./transactions";
 
@@ -26,6 +27,7 @@ export const routes = new Hono()
   // Add routes with logging middleware applied here
   .route("/health", healthRoutes)
   .route("/categories", categoriesRoutes)
+  .route("/category-groups", categoryGroupsRoutes)
   .route("/transactions", transactionsRoutes)
 
   //////////////////////////////////////////////////

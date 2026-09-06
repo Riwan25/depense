@@ -1,5 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import type { TransactionWithCategory } from "@repo/utils";
+import type { TransactionWithCategories } from "@repo/utils";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useState } from "react";
@@ -27,7 +27,7 @@ function Index() {
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategory | null>(
+  const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategories | null>(
     null,
   );
 
@@ -44,7 +44,7 @@ function Index() {
     setFormOpen(true);
   };
 
-  const handleEdit = (transaction: TransactionWithCategory) => {
+  const handleEdit = (transaction: TransactionWithCategories) => {
     setEditingTransaction(transaction);
     setFormOpen(true);
   };

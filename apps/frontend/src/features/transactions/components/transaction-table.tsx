@@ -17,15 +17,15 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import type { TransactionWithCategory } from "@repo/utils";
+import type { TransactionWithCategories } from "@repo/utils";
 import { Pencil, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
 
 import { useDeleteTransaction } from "../use-transactions";
 
 interface TransactionTableProps {
-  transactions: TransactionWithCategory[];
-  onEdit: (transaction: TransactionWithCategory) => void;
+  transactions: TransactionWithCategories[];
+  onEdit: (transaction: TransactionWithCategories) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat("fr-BE", {
@@ -95,19 +95,27 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
                     </div>
                   </TableCell>
                   <TableCell>
-                    {transaction.category?.description ?? (
+                    {transaction.categories.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {transaction.categories.map((category) => (
+                          <Badge key={category.id} variant="secondary" className="font-normal">
+                            {category.description}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
                       <span className="text-muted-foreground">Uncategorized</span>
                     )}
                   </TableCell>
                   <TableCell
                     className={cn(
                       "text-right font-medium",
-                      transaction.category?.isPositive
+                      transaction.categories[0]?.isPositive
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-red-600 dark:text-red-400",
                     )}
                   >
-                    {formatSignedValue(transaction.value, transaction.category?.isPositive ?? false)}
+                    {formatSignedValue(transaction.value, transaction.categories[0]?.isPositive ?? false)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

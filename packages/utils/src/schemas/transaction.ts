@@ -1,12 +1,11 @@
 import * as z from "zod";
 
 import { BetterAuthId$, Boolean$, Date$ } from "./base";
-import { Category$ } from "./category";
+import { CategoryRef$ } from "./category";
 
 export const Transaction$ = z.object({
   id: z.string(),
   userId: BetterAuthId$,
-  categoryId: z.string().nullish(),
   description: z.string().trim().min(1),
   comment: z.string().trim().nullish(),
   date: Date$,
@@ -17,18 +16,24 @@ export const Transaction$ = z.object({
 });
 export type Transaction = z.infer<typeof Transaction$>;
 
-export const TransactionWithCategory$ = Transaction$.extend({
-  category: Category$.nullish(),
+export const TransactionCategoryRef$ = CategoryRef$.extend({
+  isPositive: Boolean$,
 });
-export type TransactionWithCategory = z.infer<typeof TransactionWithCategory$>;
+export type TransactionCategoryRef = z.infer<typeof TransactionCategoryRef$>;
+
+export const TransactionWithCategories$ = Transaction$.extend({
+  categories: z.array(TransactionCategoryRef$).default([]),
+});
+export type TransactionWithCategories = z.infer<typeof TransactionWithCategories$>;
 
 export const CreateTransaction$ = Transaction$.pick({
-  categoryId: true,
   description: true,
   comment: true,
   date: true,
   value: true,
   isChequeRepas: true,
+}).extend({
+  categoryIds: z.array(z.string()).default([]),
 });
 export type CreateTransaction = z.infer<typeof CreateTransaction$>;
 export type CreateTransactionInput = z.input<typeof CreateTransaction$>;
@@ -67,3 +72,16 @@ export const MonthlySummary$ = z.object({
   expense: z.number(),
 });
 export type MonthlySummary = z.infer<typeof MonthlySummary$>;
+
+export const ExpenseByCategoryFilters$ = z.object({
+  from: Date$.optional(),
+  to: Date$.optional(),
+});
+export type ExpenseByCategoryFilters = z.infer<typeof ExpenseByCategoryFilters$>;
+
+export const ExpenseByCategoryEntry$ = z.object({
+  categoryId: z.string(),
+  description: z.string(),
+  total: z.number(),
+});
+export type ExpenseByCategoryEntry = z.infer<typeof ExpenseByCategoryEntry$>;

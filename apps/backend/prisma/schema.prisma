@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          String?
-  banned        Boolean?  @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  categories    Category[]
-  transactions  Transaction[]
+  id             String          @id
+  name           String
+  email          String
+  emailVerified  Boolean         @default(false)
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  role           String?
+  banned         Boolean?        @default(false)
+  banReason      String?
+  banExpires     DateTime?
+  sessions       Session[]
+  accounts       Account[]
+  categories     Category[]
+  categoryGroups CategoryGroup[]
+  transactions   Transaction[]
 
   @@unique([email])
   @@map("user")
@@ -80,35 +81,54 @@ model Verification {
 }
 
 model Category {
-  id          String        @id @default(cuid())
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  description String
-  isPositive  Boolean
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description  String
+  isPositive   Boolean
+  isDefault    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+
+  // The group auto-created when this category is given sub-categories (this
+  // category is the group's "main" category, per @@unique on mainCategoryId).
+  group          CategoryGroup?  @relation("CategoryGroupMain")
+  groupsAsMember CategoryGroup[] @relation("CategoryGroupMembers")
 
   @@index([userId])
   @@map("category")
 }
 
+model CategoryGroup {
+  id             String     @id @default(cuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  mainCategoryId String     @unique
+  mainCategory   Category   @relation("CategoryGroupMain", fields: [mainCategoryId], references: [id], onDelete: Cascade)
+  categories     Category[] @relation("CategoryGroupMembers")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([userId])
+  @@map("category_group")
+}
+
 model Transaction {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categoryId    String?
-  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories    Category[]
   description   String
   comment       String?
   date          DateTime
-  value         Decimal  @db.Decimal(10, 2)
-  isChequeRepas Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  value         Decimal    @db.Decimal(10, 2)
+  isChequeRepas Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   @@index([userId])
-  @@index([categoryId])
   @@index([userId, date])
   @@map("transaction")
 }

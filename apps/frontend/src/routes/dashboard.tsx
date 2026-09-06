@@ -11,6 +11,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { ExpenseCategoryPieChart } from "@/features/dashboard/components/expense-category-pie-chart";
 import {
   useTransactionMonthlySummary,
   useTransactionSummary,
@@ -92,6 +93,8 @@ function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <ExpenseCategoryPieChart />
     </div>
   );
 }

@@ -71,12 +71,6 @@ Check that your environment variables are set up correctly:
 pnpm run env:validate
 ```
 
-Start the development database (PostgreSQL):
-
-```bash
-pnpm run docker:db
-```
-
 Migrate the database:
 
 ```bash

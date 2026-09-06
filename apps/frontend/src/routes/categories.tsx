@@ -86,11 +86,27 @@ function CategoriesPage() {
           <TableBody>
             {categories.map((category) => (
               <TableRow key={category.id}>
-                <TableCell>{category.description}</TableCell>
                 <TableCell>
-                  <Badge variant={category.isPositive ? "default" : "secondary"}>
-                    {category.isPositive ? "Income" : "Expense"}
-                  </Badge>
+                  <div>{category.description}</div>
+                  {category.group && category.group.categories.length > 1 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {category.group.categories
+                        .filter((member) => member.id !== category.id)
+                        .map((member) => (
+                          <Badge key={member.id} variant="outline" className="font-normal">
+                            {member.description}
+                          </Badge>
+                        ))}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant={category.isPositive ? "default" : "secondary"}>
+                      {category.isPositive ? "Income" : "Expense"}
+                    </Badge>
+                    {category.isDefault && <Badge variant="outline">Default</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">

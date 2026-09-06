@@ -1,10 +1,42 @@
-import { CreateTransaction$, TransactionFilters$, UpdateTransaction$ } from "@repo/utils";
+import {
+  CreateTransaction$,
+  ExpenseByCategoryFilters$,
+  TransactionFilters$,
+  UpdateTransaction$,
+} from "@repo/utils";
 import { zValidator } from "@hono/zod-validator";
 import type { Prisma } from "@generated/prisma/client";
 import { Hono } from "hono";
 
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/middlewares/use-auth";
+
+const transactionInclude = {
+  categories: { select: { id: true, description: true, isPositive: true } },
+} as const;
+
+async function validateCategoryIds(userId: string, categoryIds: string[]) {
+  if (categoryIds.length === 0) {
+    return { ok: true as const, categories: [] };
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { id: { in: categoryIds }, userId },
+    select: { id: true, isPositive: true },
+  });
+
+  if (categories.length !== new Set(categoryIds).size) {
+    return { ok: false as const, error: "One or more categories not found" };
+  }
+  if (new Set(categories.map((category) => category.isPositive)).size > 1) {
+    return {
+      ok: false as const,
+      error: "A transaction's categories must be all income or all expense",
+    };
+  }
+
+  return { ok: true as const, categories };
+}
 
 export const transactionsRoutes = new Hono()
   .use(isAuthenticated)
@@ -14,7 +46,7 @@ export const transactionsRoutes = new Hono()
 
     const where: Prisma.TransactionWhereInput = {
       userId: user.id,
-      ...(categoryId ? { categoryId } : {}),
+      ...(categoryId ? { categories: { some: { id: categoryId } } } : {}),
       ...(isChequeRepas !== undefined ? { isChequeRepas } : {}),
       ...(from || to
         ? {
@@ -29,7 +61,7 @@ export const transactionsRoutes = new Hono()
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
         where,
-        include: { category: true },
+        include: transactionInclude,
         orderBy: { date: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -44,7 +76,7 @@ export const transactionsRoutes = new Hono()
 
     const transactions = await prisma.transaction.findMany({
       where: { userId: user.id },
-      include: { category: true },
+      include: transactionInclude,
     });
 
     let mainBalance = 0;
@@ -56,7 +88,7 @@ export const transactionsRoutes = new Hono()
 
     for (const transaction of transactions) {
       const value = Number(transaction.value);
-      const isPositive = transaction.category?.isPositive ?? false;
+      const isPositive = transaction.categories[0]?.isPositive ?? false;
       const signedValue = isPositive ? value : -value;
 
       if (transaction.isChequeRepas) {
@@ -65,17 +97,24 @@ export const transactionsRoutes = new Hono()
         mainBalance += signedValue;
       }
 
-      const key = transaction.categoryId ?? "uncategorized";
-      const existing = byCategoryMap.get(key);
-      if (existing) {
-        existing.total += signedValue;
-      } else {
-        byCategoryMap.set(key, {
-          categoryId: transaction.categoryId,
-          description: transaction.category?.description ?? "Uncategorized",
-          isPositive,
-          total: signedValue,
-        });
+      const categories =
+        transaction.categories.length > 0
+          ? transaction.categories
+          : [{ id: "uncategorized", description: "Uncategorized", isPositive }];
+
+      for (const category of categories) {
+        const key = category.id;
+        const existing = byCategoryMap.get(key);
+        if (existing) {
+          existing.total += signedValue;
+        } else {
+          byCategoryMap.set(key, {
+            categoryId: category.id === "uncategorized" ? null : category.id,
+            description: category.description,
+            isPositive,
+            total: signedValue,
+          });
+        }
       }
     }
 
@@ -95,7 +134,7 @@ export const transactionsRoutes = new Hono()
 
     const transactions = await prisma.transaction.findMany({
       where: { userId: user.id, date: { gte: since } },
-      include: { category: true },
+      include: transactionInclude,
     });
 
     const monthsMap = new Map<string, { month: string; income: number; expense: number }>();
@@ -113,7 +152,7 @@ export const transactionsRoutes = new Hono()
       if (!entry) continue;
 
       const value = Number(transaction.value);
-      if (transaction.category?.isPositive) {
+      if (transaction.categories[0]?.isPositive) {
         entry.income += value;
       } else {
         entry.expense += value;
@@ -122,22 +161,61 @@ export const transactionsRoutes = new Hono()
 
     return c.json(Array.from(monthsMap.values()));
   })
-  .post("/", zValidator("json", CreateTransaction$), async (c) => {
+  .get("/summary/by-category", zValidator("query", ExpenseByCategoryFilters$), async (c) => {
     const user = c.get("user")!;
-    const data = c.req.valid("json");
+    const { from, to } = c.req.valid("query");
 
-    if (data.categoryId) {
-      const category = await prisma.category.findFirst({
-        where: { id: data.categoryId, userId: user.id },
-      });
-      if (!category) {
-        return c.json({ error: "Category not found" }, 404);
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        categories: { some: { isPositive: false } },
+        ...(from || to
+          ? {
+              date: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+      },
+      include: transactionInclude,
+    });
+
+    const byCategoryMap = new Map<string, { categoryId: string; description: string; total: number }>();
+    for (const transaction of transactions) {
+      const value = Number(transaction.value);
+      for (const category of transaction.categories) {
+        const existing = byCategoryMap.get(category.id);
+        if (existing) {
+          existing.total += value;
+        } else {
+          byCategoryMap.set(category.id, {
+            categoryId: category.id,
+            description: category.description,
+            total: value,
+          });
+        }
       }
     }
 
+    return c.json(Array.from(byCategoryMap.values()));
+  })
+  .post("/", zValidator("json", CreateTransaction$), async (c) => {
+    const user = c.get("user")!;
+    const { categoryIds, ...data } = c.req.valid("json");
+
+    const validation = await validateCategoryIds(user.id, categoryIds);
+    if (!validation.ok) {
+      return c.json({ error: validation.error }, 400);
+    }
+
     const transaction = await prisma.transaction.create({
-      data: { ...data, userId: user.id },
-      include: { category: true },
+      data: {
+        ...data,
+        userId: user.id,
+        categories: { connect: categoryIds.map((id) => ({ id })) },
+      },
+      include: transactionInclude,
     });
 
     return c.json(transaction, 201);
@@ -145,7 +223,7 @@ export const transactionsRoutes = new Hono()
   .patch("/:id", zValidator("json", UpdateTransaction$), async (c) => {
     const user = c.get("user")!;
     const { id } = c.req.param();
-    const data = c.req.valid("json");
+    const { categoryIds, ...data } = c.req.valid("json");
 
     const existing = await prisma.transaction.findFirst({
       where: { id, userId: user.id },
@@ -154,19 +232,22 @@ export const transactionsRoutes = new Hono()
       return c.json({ error: "Transaction not found" }, 404);
     }
 
-    if (data.categoryId) {
-      const category = await prisma.category.findFirst({
-        where: { id: data.categoryId, userId: user.id },
-      });
-      if (!category) {
-        return c.json({ error: "Category not found" }, 404);
+    if (categoryIds !== undefined) {
+      const validation = await validateCategoryIds(user.id, categoryIds);
+      if (!validation.ok) {
+        return c.json({ error: validation.error }, 400);
       }
     }
 
     const transaction = await prisma.transaction.update({
       where: { id },
-      data,
-      include: { category: true },
+      data: {
+        ...data,
+        ...(categoryIds !== undefined
+          ? { categories: { set: categoryIds.map((id) => ({ id })) } }
+          : {}),
+      },
+      include: transactionInclude,
     });
 
     return c.json(transaction);

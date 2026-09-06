@@ -1,7 +1,8 @@
 import {
+  ExpenseByCategoryEntry$,
   MonthlySummary$,
   TransactionSummary$,
-  TransactionWithCategory$,
+  TransactionWithCategories$,
   type CreateTransactionInput,
   type UpdateTransactionInput,
 } from "@repo/utils";
@@ -9,6 +10,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { apiClient } from "@/lib/api-client";
+
+async function readErrorMessage(res: Response, fallback: string) {
+  const body: unknown = await res.json().catch(() => null);
+  if (body && typeof body === "object" && "error" in body && typeof body.error === "string") {
+    return body.error;
+  }
+  return fallback;
+}
 
 const TRANSACTIONS_QUERY_KEY = "transactions";
 const TRANSACTIONS_SUMMARY_QUERY_KEY = "transactions-summary";
@@ -38,7 +47,7 @@ export function useTransactions(filter: TransactionListFilter) {
       const data = await res.json();
       return {
         transactions: data.transactions.map((transaction) =>
-          TransactionWithCategory$.parse(transaction),
+          TransactionWithCategories$.parse(transaction),
         ),
         total: data.total,
         page: data.page,
@@ -75,6 +84,29 @@ export function useTransactionMonthlySummary() {
   });
 }
 
+export interface ExpenseByCategoryFilter {
+  from?: Date;
+  to?: Date;
+}
+
+export function useExpenseByCategory(filter: ExpenseByCategoryFilter) {
+  return useQuery({
+    queryKey: ["transactions-summary-by-category", filter.from?.toISOString(), filter.to?.toISOString()],
+    queryFn: async () => {
+      const res = await apiClient.api.transactions.summary["by-category"].$get({
+        query: {
+          ...(filter.from ? { from: filter.from.toISOString() } : {}),
+          ...(filter.to ? { to: filter.to.toISOString() } : {}),
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch expense summary");
+      const data = await res.json();
+      return data.map((entry) => ExpenseByCategoryEntry$.parse(entry));
+    },
+    staleTime: 10_000,
+  });
+}
+
 function useInvalidateTransactions() {
   const queryClient = useQueryClient();
   return () => {
@@ -89,8 +121,8 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: async (data: CreateTransactionInput) => {
       const res = await apiClient.api.transactions.$post({ json: data });
-      if (!res.ok) throw new Error("Failed to create transaction");
-      return TransactionWithCategory$.parse(await res.json());
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to create transaction"));
+      return TransactionWithCategories$.parse(await res.json());
     },
     onSuccess: () => {
       invalidate();
@@ -106,8 +138,8 @@ export function useUpdateTransaction() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateTransactionInput }) => {
       const res = await apiClient.api.transactions[":id"].$patch({ param: { id }, json: data });
-      if (!res.ok) throw new Error("Failed to update transaction");
-      return TransactionWithCategory$.parse(await res.json());
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to update transaction"));
+      return TransactionWithCategories$.parse(await res.json());
     },
     onSuccess: () => {
       invalidate();
