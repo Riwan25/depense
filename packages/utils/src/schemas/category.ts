@@ -3,8 +3,8 @@ import * as z from "zod";
 import { BetterAuthId$, Boolean$, Date$ } from "./base";
 
 export const CategoryRef$ = z.object({
-  id: z.string(),
-  description: z.string(),
+  id: z.string().trim(),
+  description: z.string().trim(),
 });
 export type CategoryRef = z.infer<typeof CategoryRef$>;
 
@@ -14,14 +14,14 @@ export const CategoryGroupMemberRef$ = CategoryRef$.extend({
 export type CategoryGroupMemberRef = z.infer<typeof CategoryGroupMemberRef$>;
 
 export const CategoryGroupRef$ = z.object({
-  id: z.string(),
-  name: z.string(),
+  id: z.string().trim(),
+  name: z.string().trim(),
   categories: z.array(CategoryGroupMemberRef$).default([]),
 });
 export type CategoryGroupRef = z.infer<typeof CategoryGroupRef$>;
 
 export const Category$ = z.object({
-  id: z.string(),
+  id: z.string().trim(),
   userId: BetterAuthId$,
   description: z.string().trim().min(1),
   isPositive: Boolean$,
@@ -39,7 +39,7 @@ export const CreateCategory$ = Category$.pick({
   isPositive: true,
   isDefault: true,
 }).extend({
-  subCategoryIds: z.array(z.string()).optional(),
+  subCategoryIds: z.array(z.string().trim()).optional(),
 });
 export type CreateCategory = z.infer<typeof CreateCategory$>;
 
@@ -47,10 +47,10 @@ export const UpdateCategory$ = CreateCategory$.partial();
 export type UpdateCategory = z.infer<typeof UpdateCategory$>;
 
 export const CategoryGroup$ = z.object({
-  id: z.string(),
+  id: z.string().trim(),
   userId: BetterAuthId$,
-  name: z.string(),
-  mainCategoryId: z.string(),
+  name: z.string().trim(),
+  mainCategoryId: z.string().trim(),
   categories: z.array(CategoryGroupMemberRef$).default([]),
   createdAt: Date$,
   updatedAt: Date$,

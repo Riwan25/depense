@@ -15,6 +15,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Switch,
   type ChartConfig,
 } from "@repo/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +35,6 @@ const CATEGORICAL_COLORS = [
   "var(--chart-cat-8)",
 ];
 const OTHER_COLOR = "var(--chart-cat-other)";
-const MAX_SLICES = CATEGORICAL_COLORS.length;
 
 const currencyFormatter = new Intl.NumberFormat("fr-BE", {
   style: "currency",
@@ -60,6 +60,7 @@ export function ExpenseCategoryPieChart() {
   const [from, setFrom] = useState(toDateInputValue(startOfCurrentMonth()));
   const [to, setTo] = useState(toDateInputValue(new Date()));
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [showOther, setShowOther] = useState(false);
   const hasInitializedSelection = useRef(false);
 
   useEffect(() => {
@@ -70,35 +71,43 @@ export function ExpenseCategoryPieChart() {
     setSelectedCategoryIds((defaults.length > 0 ? defaults : expenseCategories).map((c) => c.id));
   }, [expenseCategories]);
 
-  const { data: entries = [] } = useExpenseByCategory({
+  const { data: summary } = useExpenseByCategory({
     from: new Date(from),
     to: new Date(new Date(to).setHours(23, 59, 59, 999)),
+    categoryIds: selectedCategoryIds,
   });
+  const byCategory = summary?.byCategory ?? [];
+  const otherTotal = summary?.otherTotal ?? 0;
 
   // Colors are assigned from a stable, filter-independent order so a category
-  // keeps the same color whether or not other categories are selected.
+  // keeps the same color whether or not other categories are selected. Every
+  // category gets a color (cycling the palette past 8) so a selected category
+  // is always shown under its own name instead of collapsing into "Other".
   const colorByCategoryId = useMemo(() => {
     const sorted = [...expenseCategories].sort((a, b) =>
       a.description.localeCompare(b.description),
     );
-    return new Map(sorted.slice(0, MAX_SLICES).map((c, i) => [c.id, CATEGORICAL_COLORS[i]]));
+    return new Map(sorted.map((c, i) => [c.id, CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]]));
   }, [expenseCategories]);
 
   const chartData = useMemo(() => {
-    const shown = entries.filter((e) => selectedCategoryIds.includes(e.categoryId) && e.total > 0);
-    const colored = shown.filter((e) => colorByCategoryId.has(e.categoryId));
-    const uncolored = shown.filter((e) => !colorByCategoryId.has(e.categoryId));
-    const otherTotal = uncolored.reduce((sum, e) => sum + e.total, 0);
+    // The backend already scopes byCategory to the selected categories and
+    // counts each transaction once toward `otherTotal`, however many
+    // non-selected categories it also carries, so there's no double-counting
+    // to guard against here.
+    const shown = byCategory.filter((e) => e.total > 0);
 
     return [
-      ...colored.map((e) => ({
+      ...shown.map((e) => ({
         description: e.description,
         total: e.total,
-        fill: colorByCategoryId.get(e.categoryId)!,
+        fill: colorByCategoryId.get(e.categoryId) ?? OTHER_COLOR,
       })),
-      ...(otherTotal > 0 ? [{ description: "Other", total: otherTotal, fill: OTHER_COLOR }] : []),
+      ...(showOther && otherTotal > 0
+        ? [{ description: "Other", total: otherTotal, fill: OTHER_COLOR }]
+        : []),
     ].sort((a, b) => b.total - a.total);
-  }, [entries, selectedCategoryIds, colorByCategoryId]);
+  }, [byCategory, otherTotal, colorByCategoryId, showOther]);
 
   const total = chartData.reduce((sum, d) => sum + d.total, 0);
 
@@ -153,6 +162,12 @@ export function ExpenseCategoryPieChart() {
                   ))}
                 </div>
               )}
+              <div className="border-border mt-3 flex items-center justify-between gap-2 border-t pt-3">
+                <Label htmlFor="chart-show-other" className="font-normal">
+                  Show "Other" (unselected + uncategorized)
+                </Label>
+                <Switch id="chart-show-other" checked={showOther} onCheckedChange={setShowOther} />
+              </div>
             </PopoverContent>
           </Popover>
         </div>

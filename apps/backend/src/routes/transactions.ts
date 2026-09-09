@@ -163,7 +163,8 @@ export const transactionsRoutes = new Hono()
   })
   .get("/summary/by-category", zValidator("query", ExpenseByCategoryFilters$), async (c) => {
     const user = c.get("user")!;
-    const { from, to } = c.req.valid("query");
+    const { from, to, categoryIds } = c.req.valid("query");
+    const selectedIds = new Set(categoryIds ?? []);
 
     const transactions = await prisma.transaction.findMany({
       where: {
@@ -185,9 +186,20 @@ export const transactionsRoutes = new Hono()
       string,
       { categoryId: string; description: string; total: number }
     >();
+    let otherTotal = 0;
+
     for (const transaction of transactions) {
       const value = Number(transaction.value);
-      for (const category of transaction.categories) {
+      const matching = transaction.categories.filter((category) => selectedIds.has(category.id));
+
+      if (matching.length === 0) {
+        // No tagged category is selected (including no categories at all):
+        // count the transaction once, however many other tags it carries.
+        otherTotal += value;
+        continue;
+      }
+
+      for (const category of matching) {
         const existing = byCategoryMap.get(category.id);
         if (existing) {
           existing.total += value;
@@ -201,7 +213,7 @@ export const transactionsRoutes = new Hono()
       }
     }
 
-    return c.json(Array.from(byCategoryMap.values()));
+    return c.json({ byCategory: Array.from(byCategoryMap.values()), otherTotal });
   })
   .post("/", zValidator("json", CreateTransaction$), async (c) => {
     const user = c.get("user")!;

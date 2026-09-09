@@ -1,5 +1,5 @@
 import {
-  ExpenseByCategoryEntry$,
+  ExpenseByCategorySummary$,
   MonthlySummary$,
   TransactionSummary$,
   TransactionWithCategories$,
@@ -87,6 +87,7 @@ export function useTransactionMonthlySummary() {
 export interface ExpenseByCategoryFilter {
   from?: Date;
   to?: Date;
+  categoryIds: string[];
 }
 
 export function useExpenseByCategory(filter: ExpenseByCategoryFilter) {
@@ -95,17 +96,18 @@ export function useExpenseByCategory(filter: ExpenseByCategoryFilter) {
       "transactions-summary-by-category",
       filter.from?.toISOString(),
       filter.to?.toISOString(),
+      [...filter.categoryIds].sort(),
     ],
     queryFn: async () => {
       const res = await apiClient.api.transactions.summary["by-category"].$get({
         query: {
           ...(filter.from ? { from: filter.from.toISOString() } : {}),
           ...(filter.to ? { to: filter.to.toISOString() } : {}),
+          ...(filter.categoryIds.length > 0 ? { categoryIds: filter.categoryIds.join(",") } : {}),
         },
       });
       if (!res.ok) throw new Error("Failed to fetch expense summary");
-      const data = await res.json();
-      return data.map((entry) => ExpenseByCategoryEntry$.parse(entry));
+      return ExpenseByCategorySummary$.parse(await res.json());
     },
     staleTime: 10_000,
   });
