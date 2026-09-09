@@ -1,11 +1,11 @@
+import type { Prisma } from "@generated/prisma/client";
+import { zValidator } from "@hono/zod-validator";
 import {
   CreateTransaction$,
   ExpenseByCategoryFilters$,
   TransactionFilters$,
   UpdateTransaction$,
 } from "@repo/utils";
-import { zValidator } from "@hono/zod-validator";
-import type { Prisma } from "@generated/prisma/client";
 import { Hono } from "hono";
 
 import { prisma } from "@/lib/prisma";
@@ -88,7 +88,7 @@ export const transactionsRoutes = new Hono()
 
     for (const transaction of transactions) {
       const value = Number(transaction.value);
-      const isPositive = transaction.categories[0]?.isPositive ?? false;
+      const isPositive = transaction.isPositive;
       const signedValue = isPositive ? value : -value;
 
       if (transaction.isChequeRepas) {
@@ -152,7 +152,7 @@ export const transactionsRoutes = new Hono()
       if (!entry) continue;
 
       const value = Number(transaction.value);
-      if (transaction.categories[0]?.isPositive) {
+      if (transaction.isPositive) {
         entry.income += value;
       } else {
         entry.expense += value;
@@ -168,7 +168,7 @@ export const transactionsRoutes = new Hono()
     const transactions = await prisma.transaction.findMany({
       where: {
         userId: user.id,
-        categories: { some: { isPositive: false } },
+        isPositive: false,
         ...(from || to
           ? {
               date: {
@@ -181,7 +181,10 @@ export const transactionsRoutes = new Hono()
       include: transactionInclude,
     });
 
-    const byCategoryMap = new Map<string, { categoryId: string; description: string; total: number }>();
+    const byCategoryMap = new Map<
+      string,
+      { categoryId: string; description: string; total: number }
+    >();
     for (const transaction of transactions) {
       const value = Number(transaction.value);
       for (const category of transaction.categories) {
@@ -209,9 +212,15 @@ export const transactionsRoutes = new Hono()
       return c.json({ error: validation.error }, 400);
     }
 
+    // Once categories are picked, the transaction's sign is locked to theirs
+    // rather than whatever was passed in.
+    const isPositive =
+      categoryIds.length > 0 ? validation.categories[0]!.isPositive : data.isPositive;
+
     const transaction = await prisma.transaction.create({
       data: {
         ...data,
+        isPositive,
         userId: user.id,
         categories: { connect: categoryIds.map((id) => ({ id })) },
       },
@@ -227,22 +236,31 @@ export const transactionsRoutes = new Hono()
 
     const existing = await prisma.transaction.findFirst({
       where: { id, userId: user.id },
+      include: transactionInclude,
     });
     if (!existing) {
       return c.json({ error: "Transaction not found" }, 404);
     }
+
+    let isPositive = data.isPositive;
 
     if (categoryIds !== undefined) {
       const validation = await validateCategoryIds(user.id, categoryIds);
       if (!validation.ok) {
         return c.json({ error: validation.error }, 400);
       }
+      isPositive = categoryIds.length > 0 ? validation.categories[0]!.isPositive : data.isPositive;
+    } else if (existing.categories.length > 0) {
+      // Categories aren't being touched and already lock the sign: ignore
+      // any isPositive passed in.
+      isPositive = existing.isPositive;
     }
 
     const transaction = await prisma.transaction.update({
       where: { id },
       data: {
         ...data,
+        ...(isPositive !== undefined ? { isPositive } : {}),
         ...(categoryIds !== undefined
           ? { categories: { set: categoryIds.map((id) => ({ id })) } }
           : {}),

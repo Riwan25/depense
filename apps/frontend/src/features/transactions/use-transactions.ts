@@ -91,7 +91,11 @@ export interface ExpenseByCategoryFilter {
 
 export function useExpenseByCategory(filter: ExpenseByCategoryFilter) {
   return useQuery({
-    queryKey: ["transactions-summary-by-category", filter.from?.toISOString(), filter.to?.toISOString()],
+    queryKey: [
+      "transactions-summary-by-category",
+      filter.from?.toISOString(),
+      filter.to?.toISOString(),
+    ],
     queryFn: async () => {
       const res = await apiClient.api.transactions.summary["by-category"].$get({
         query: {

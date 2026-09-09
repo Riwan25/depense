@@ -1,5 +1,5 @@
-import { CreateCategory$, UpdateCategory$ } from "@repo/utils";
 import { zValidator } from "@hono/zod-validator";
+import { CreateCategory$, UpdateCategory$ } from "@repo/utils";
 import { Hono } from "hono";
 
 import { prisma } from "@/lib/prisma";
@@ -92,7 +92,9 @@ export const categoriesRoutes = new Hono()
         })
       ).map((c) => c.id);
 
-      const existingGroup = await prisma.categoryGroup.findUnique({ where: { mainCategoryId: id } });
+      const existingGroup = await prisma.categoryGroup.findUnique({
+        where: { mainCategoryId: id },
+      });
 
       if (validSubCategoryIds.length > 0) {
         const memberIds = [id, ...validSubCategoryIds];

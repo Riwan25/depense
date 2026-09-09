@@ -124,6 +124,7 @@ model Transaction {
   comment       String?
   date          DateTime
   value         Decimal    @db.Decimal(10, 2)
+  isPositive    Boolean    @default(false)
   isChequeRepas Boolean    @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

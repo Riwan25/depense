@@ -22,8 +22,8 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import { Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useCategoryGroups } from "../use-category-groups";
 import { useCategories, useCreateCategory, useUpdateCategory } from "../use-categories";
+import { useCategoryGroups } from "../use-category-groups";
 
 interface CategoryFormDialogProps {
   open: boolean;
@@ -96,7 +96,8 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
   const availableGroups = useMemo(
     () =>
       groups.filter(
-        (group) => group.mainCategoryId !== category?.id && group.categories[0]?.isPositive === isPositive,
+        (group) =>
+          group.mainCategoryId !== category?.id && group.categories[0]?.isPositive === isPositive,
       ),
     [groups, category, isPositive],
   );
@@ -238,7 +239,9 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
                           <Checkbox
                             id={`sub-category-${sub.id}`}
                             checked={subCategoryIds.includes(sub.id)}
-                            onCheckedChange={(checked) => toggleSubCategory(sub.id, checked === true)}
+                            onCheckedChange={(checked) =>
+                              toggleSubCategory(sub.id, checked === true)
+                            }
                           />
                           <Label htmlFor={`sub-category-${sub.id}`} className="font-normal">
                             {sub.description}

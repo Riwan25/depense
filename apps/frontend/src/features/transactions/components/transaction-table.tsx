@@ -72,9 +72,7 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
             return (
               <Fragment key={transaction.id}>
                 <TableRow
-                  onClick={() =>
-                    setExpandedId(isExpanded ? null : transaction.id)
-                  }
+                  onClick={() => setExpandedId(isExpanded ? null : transaction.id)}
                   className={cn(
                     "cursor-pointer",
                     transaction.isChequeRepas && "bg-amber-50 dark:bg-amber-950/30",
@@ -110,12 +108,12 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
                   <TableCell
                     className={cn(
                       "text-right font-medium",
-                      transaction.categories[0]?.isPositive
+                      transaction.isPositive
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-red-600 dark:text-red-400",
                     )}
                   >
-                    {formatSignedValue(transaction.value, transaction.categories[0]?.isPositive ?? false)}
+                    {formatSignedValue(transaction.value, transaction.isPositive)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

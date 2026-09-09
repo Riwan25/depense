@@ -67,9 +67,7 @@ export function ExpenseCategoryPieChart() {
     hasInitializedSelection.current = true;
 
     const defaults = expenseCategories.filter((c) => c.isDefault);
-    setSelectedCategoryIds(
-      (defaults.length > 0 ? defaults : expenseCategories).map((c) => c.id),
-    );
+    setSelectedCategoryIds((defaults.length > 0 ? defaults : expenseCategories).map((c) => c.id));
   }, [expenseCategories]);
 
   const { data: entries = [] } = useExpenseByCategory({
@@ -80,7 +78,9 @@ export function ExpenseCategoryPieChart() {
   // Colors are assigned from a stable, filter-independent order so a category
   // keeps the same color whether or not other categories are selected.
   const colorByCategoryId = useMemo(() => {
-    const sorted = [...expenseCategories].sort((a, b) => a.description.localeCompare(b.description));
+    const sorted = [...expenseCategories].sort((a, b) =>
+      a.description.localeCompare(b.description),
+    );
     return new Map(sorted.slice(0, MAX_SLICES).map((c, i) => [c.id, CATEGORICAL_COLORS[i]]));
   }, [expenseCategories]);
 
@@ -193,7 +193,12 @@ export function ExpenseCategoryPieChart() {
                 }
               >
                 {chartData.map((entry) => (
-                  <Cell key={entry.description} fill={entry.fill} stroke="var(--card)" strokeWidth={2} />
+                  <Cell
+                    key={entry.description}
+                    fill={entry.fill}
+                    stroke="var(--card)"
+                    strokeWidth={2}
+                  />
                 ))}
               </Pie>
               <ChartLegend content={<ChartLegendContent nameKey="description" />} />

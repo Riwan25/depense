@@ -10,6 +10,7 @@ export const Transaction$ = z.object({
   comment: z.string().trim().nullish(),
   date: Date$,
   value: z.coerce.number().positive(),
+  isPositive: Boolean$.default(false),
   isChequeRepas: Boolean$.default(false),
   createdAt: Date$,
   updatedAt: Date$,
@@ -31,9 +32,13 @@ export const CreateTransaction$ = Transaction$.pick({
   comment: true,
   date: true,
   value: true,
+  isPositive: true,
   isChequeRepas: true,
 }).extend({
-  categoryIds: z.array(z.string()).default([]),
+  // No .default(): under UpdateTransaction$'s .partial(), a defaulted array
+  // would resolve to [] (not undefined) when the key is omitted, making it
+  // indistinguishable from "explicitly clear the categories".
+  categoryIds: z.array(z.string()),
 });
 export type CreateTransaction = z.infer<typeof CreateTransaction$>;
 export type CreateTransactionInput = z.input<typeof CreateTransaction$>;

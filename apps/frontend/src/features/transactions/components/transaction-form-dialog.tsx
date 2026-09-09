@@ -18,7 +18,12 @@ import {
   Switch,
   Textarea,
 } from "@repo/ui";
-import type { Category, CategoryGroup, CreateTransactionInput, TransactionWithCategories } from "@repo/utils";
+import type {
+  Category,
+  CategoryGroup,
+  CreateTransactionInput,
+  TransactionWithCategories,
+} from "@repo/utils";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -54,6 +59,7 @@ export function TransactionFormDialog({
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [value, setValue] = useState("");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [isPositive, setIsPositive] = useState(false);
   const [isChequeRepas, setIsChequeRepas] = useState(false);
 
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
@@ -77,6 +83,7 @@ export function TransactionFormDialog({
       setDate(toDateInputValue(transaction.date));
       setValue(String(transaction.value));
       setCategoryIds(transaction.categories.map((category) => category.id));
+      setIsPositive(transaction.isPositive);
       setIsChequeRepas(transaction.isChequeRepas);
       autoFilledDescriptionRef.current = "";
     } else {
@@ -85,6 +92,7 @@ export function TransactionFormDialog({
       setDate(toDateInputValue(new Date()));
       setValue("");
       setCategoryIds([]);
+      setIsPositive(false);
       setIsChequeRepas(false);
       autoFilledDescriptionRef.current = "";
     }
@@ -118,14 +126,22 @@ export function TransactionFormDialog({
   };
 
   // A transaction's categories must all be income or all be expense, so once
-  // any category is picked, the pickers only offer more of the same type.
+  // any category is picked, the pickers only offer more of the same type and
+  // the income/expense switch is locked to match.
   const selectedType = useMemo(() => {
     const selected = categories.find((category) => categoryIds.includes(category.id));
     return selected?.isPositive ?? null;
   }, [categories, categoryIds]);
 
+  useEffect(() => {
+    if (selectedType !== null) setIsPositive(selectedType);
+  }, [selectedType]);
+
   const availableCategories = useMemo(
-    () => categories.filter((category) => selectedType === null || category.isPositive === selectedType),
+    () =>
+      categories.filter(
+        (category) => selectedType === null || category.isPositive === selectedType,
+      ),
     [categories, selectedType],
   );
   const filteredCategories = useMemo(
@@ -137,7 +153,10 @@ export function TransactionFormDialog({
   );
 
   const availableGroups = useMemo(
-    () => groups.filter((group) => selectedType === null || group.categories[0]?.isPositive === selectedType),
+    () =>
+      groups.filter(
+        (group) => selectedType === null || group.categories[0]?.isPositive === selectedType,
+      ),
     [groups, selectedType],
   );
   const filteredGroups = useMemo(
@@ -162,7 +181,8 @@ export function TransactionFormDialog({
   };
 
   const isGroupSelected = (group: CategoryGroup) =>
-    group.categories.length > 0 && group.categories.every((member) => categoryIds.includes(member.id));
+    group.categories.length > 0 &&
+    group.categories.every((member) => categoryIds.includes(member.id));
 
   const toggleGroup = (group: CategoryGroup, checked: boolean) => {
     const memberIds = group.categories.map((member) => member.id);
@@ -183,6 +203,7 @@ export function TransactionFormDialog({
       date: new Date(date).toISOString(),
       value: Number(value),
       categoryIds,
+      isPositive,
       isChequeRepas,
     };
 
@@ -260,7 +281,9 @@ export function TransactionFormDialog({
                           <Checkbox
                             id={`transaction-category-${category.id}`}
                             checked={categoryIds.includes(category.id)}
-                            onCheckedChange={(checked) => toggleCategory(category, checked === true)}
+                            onCheckedChange={(checked) =>
+                              toggleCategory(category, checked === true)
+                            }
                           />
                           <Label
                             htmlFor={`transaction-category-${category.id}`}
@@ -311,6 +334,23 @@ export function TransactionFormDialog({
               </Popover>
             </div>
           </Field>
+
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="transaction-is-positive">
+              This is income (adds to balance)
+            </FieldLabel>
+            <Switch
+              id="transaction-is-positive"
+              checked={isPositive}
+              onCheckedChange={setIsPositive}
+              disabled={selectedType !== null}
+            />
+          </Field>
+          {selectedType !== null && (
+            <p className="text-muted-foreground -mt-2 text-sm">
+              Locked to the type of the selected categories.
+            </p>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Field>

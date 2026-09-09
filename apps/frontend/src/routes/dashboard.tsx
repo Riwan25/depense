@@ -71,9 +71,7 @@ function DashboardPage() {
         </CardHeader>
         <CardContent>
           {categoryData.length === 0 ? (
-            <p className="text-muted-foreground py-8 text-center text-sm">
-              No transactions yet.
-            </p>
+            <p className="text-muted-foreground py-8 text-center text-sm">No transactions yet.</p>
           ) : (
             <ChartContainer config={categoryConfig} className="h-72 w-full">
               <BarChart data={categoryData} layout="vertical">
