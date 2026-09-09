@@ -6,8 +6,7 @@
     "build": "vp build",
     "dev": "vp dev",
     "env:generate": "varlock typegen",
-    "env:validate": "varlock load",
-    "test": "vp test"
+    "env:validate": "varlock load"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",

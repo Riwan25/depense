@@ -19,8 +19,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:validate": "cross-env APP_ENV=development prisma validate",
     "start": "pnpm run prisma:migrate:deploy && node ./dist/index.mjs",
-    "sync-json-data": "tsx ./scripts/sync-json-data.ts",
-    "test": "vp test"
+    "sync-json-data": "tsx ./scripts/sync-json-data.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",

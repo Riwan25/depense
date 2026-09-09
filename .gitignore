@@ -14,9 +14,6 @@ dist/
 out/
 web-build/
 
-# Testing
-coverage/
-
 # Logs
 *.log
 npm-debug.log*
@@ -38,10 +35,3 @@ generated/
 
 # Vite
 .vite/
-
-# Playwright
-test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
-playwright/.auth/
