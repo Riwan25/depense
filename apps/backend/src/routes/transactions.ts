@@ -143,7 +143,7 @@ export const transactionsRoutes = new Hono()
     const end = new Date(year + 1, 0, 1);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId: user.id, date: { gte: start, lt: end }, transferGroupId: null },
+      where: { userId: user.id, date: { gte: start, lt: end }, bucket: { not: "SAVINGS" } },
     });
 
     const months: MonthlySummary[] = Array.from({ length: 12 }, (_, i) => ({
