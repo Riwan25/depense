@@ -1,9 +1,9 @@
 import {
   ExpenseByCategorySummary$,
-  MonthlySummary$,
   SavingsTransferResult$,
   TransactionSummary$,
   TransactionWithCategories$,
+  YearlySummary$,
   type CreateSavingsTransferInput,
   type CreateTransactionInput,
   type TransactionBucket,
@@ -72,14 +72,15 @@ export function useTransactionSummary() {
   });
 }
 
-export function useTransactionMonthlySummary() {
+export function useTransactionYearlySummary(year: number) {
   return useQuery({
-    queryKey: ["transactions-monthly-summary"],
+    queryKey: ["transactions-yearly-summary", year],
     queryFn: async () => {
-      const res = await apiClient.api.transactions.summary.monthly.$get();
-      if (!res.ok) throw new Error("Failed to fetch monthly summary");
-      const data = await res.json();
-      return data.map((entry) => MonthlySummary$.parse(entry));
+      const res = await apiClient.api.transactions.summary.monthly.$get({
+        query: { year: String(year) },
+      });
+      if (!res.ok) throw new Error("Failed to fetch yearly summary");
+      return YearlySummary$.parse(await res.json());
     },
     staleTime: 30_000,
   });

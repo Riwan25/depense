@@ -78,10 +78,33 @@ export type TransactionSummary = z.infer<typeof TransactionSummary$>;
 
 export const MonthlySummary$ = z.object({
   month: z.string().trim(),
-  income: z.number(),
-  expense: z.number(),
+  mainIncome: z.number(),
+  mainExpense: z.number(),
+  chequeRepasIncome: z.number(),
+  chequeRepasExpense: z.number(),
 });
 export type MonthlySummary = z.infer<typeof MonthlySummary$>;
+
+export const YearlySummaryTotals$ = z.object({
+  mainIncome: z.number(),
+  mainExpense: z.number(),
+  chequeRepasIncome: z.number(),
+  chequeRepasExpense: z.number(),
+});
+export type YearlySummaryTotals = z.infer<typeof YearlySummaryTotals$>;
+
+export const YearlySummary$ = z.object({
+  year: z.int(),
+  months: z.array(MonthlySummary$).length(12),
+  totals: YearlySummaryTotals$,
+});
+export type YearlySummary = z.infer<typeof YearlySummary$>;
+
+export const YearlySummaryFilters$ = z.object({
+  year: z.coerce.number().int().optional(),
+});
+export type YearlySummaryFilters = z.infer<typeof YearlySummaryFilters$>;
+export type YearlySummaryFiltersInput = z.input<typeof YearlySummaryFilters$>;
 
 export const ExpenseByCategoryFilters$ = z.object({
   from: Date$.optional(),

@@ -171,7 +171,10 @@ export function SavingsTransferDialog({
                               toggleCategory(category, checked === true)
                             }
                           />
-                          <Label htmlFor={`transfer-category-${category.id}`} className="font-normal">
+                          <Label
+                            htmlFor={`transfer-category-${category.id}`}
+                            className="font-normal"
+                          >
                             {category.description}
                           </Label>
                         </div>

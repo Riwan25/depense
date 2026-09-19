@@ -6,6 +6,8 @@ import {
   ExpenseByCategoryFilters$,
   TransactionFilters$,
   UpdateTransaction$,
+  YearlySummaryFilters$,
+  type MonthlySummary,
 } from "@repo/utils";
 import { Hono } from "hono";
 
@@ -133,42 +135,52 @@ export const transactionsRoutes = new Hono()
       byCategory: Array.from(byCategoryMap.values()),
     });
   })
-  .get("/summary/monthly", async (c) => {
+  .get("/summary/monthly", zValidator("query", YearlySummaryFilters$), async (c) => {
     const user = c.get("user")!;
+    const year = c.req.valid("query").year ?? new Date().getFullYear();
 
-    const since = new Date();
-    since.setMonth(since.getMonth() - 11);
-    since.setDate(1);
-    since.setHours(0, 0, 0, 0);
+    const start = new Date(year, 0, 1);
+    const end = new Date(year + 1, 0, 1);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId: user.id, date: { gte: since }, transferGroupId: null },
-      include: transactionInclude,
+      where: { userId: user.id, date: { gte: start, lt: end }, transferGroupId: null },
     });
 
-    const monthsMap = new Map<string, { month: string; income: number; expense: number }>();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(since);
-      d.setMonth(d.getMonth() + i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      monthsMap.set(key, { month: key, income: 0, expense: 0 });
-    }
+    const months: MonthlySummary[] = Array.from({ length: 12 }, (_, i) => ({
+      month: `${year}-${String(i + 1).padStart(2, "0")}`,
+      mainIncome: 0,
+      mainExpense: 0,
+      chequeRepasIncome: 0,
+      chequeRepasExpense: 0,
+    }));
+    const totals = { mainIncome: 0, mainExpense: 0, chequeRepasIncome: 0, chequeRepasExpense: 0 };
 
     for (const transaction of transactions) {
       const date = new Date(transaction.date);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const entry = monthsMap.get(key);
-      if (!entry) continue;
-
+      const entry = months[date.getMonth()]!;
       const value = Number(transaction.value);
+      const isChequeRepas = transaction.bucket === "CHEQUE_REPAS";
+
       if (transaction.isPositive) {
-        entry.income += value;
+        if (isChequeRepas) {
+          entry.chequeRepasIncome += value;
+          totals.chequeRepasIncome += value;
+        } else {
+          entry.mainIncome += value;
+          totals.mainIncome += value;
+        }
       } else {
-        entry.expense += value;
+        if (isChequeRepas) {
+          entry.chequeRepasExpense += value;
+          totals.chequeRepasExpense += value;
+        } else {
+          entry.mainExpense += value;
+          totals.mainExpense += value;
+        }
       }
     }
 
-    return c.json(Array.from(monthsMap.values()));
+    return c.json({ year, months, totals });
   })
   .get("/summary/by-category", zValidator("query", ExpenseByCategoryFilters$), async (c) => {
     const user = c.get("user")!;
@@ -264,7 +276,10 @@ export const transactionsRoutes = new Hono()
     }
     if (existing.transferGroupId) {
       return c.json(
-        { error: "Transfer transactions cannot be edited. Delete and recreate the transfer instead." },
+        {
+          error:
+            "Transfer transactions cannot be edited. Delete and recreate the transfer instead.",
+        },
         400,
       );
     }
@@ -332,8 +347,11 @@ export const transactionsRoutes = new Hono()
     }
 
     const [fromBucket, toBucket] =
-      direction === "MAIN_TO_SAVINGS" ? (["MAIN", "SAVINGS"] as const) : (["SAVINGS", "MAIN"] as const);
-    const description = direction === "MAIN_TO_SAVINGS" ? "Transfer to savings" : "Transfer to main";
+      direction === "MAIN_TO_SAVINGS"
+        ? (["MAIN", "SAVINGS"] as const)
+        : (["SAVINGS", "MAIN"] as const);
+    const description =
+      direction === "MAIN_TO_SAVINGS" ? "Transfer to savings" : "Transfer to main";
     const transferGroupId = crypto.randomUUID();
     // Both legs of a transfer represent the same real-world movement, so they
     // share the same categories even though their isPositive signs differ -
