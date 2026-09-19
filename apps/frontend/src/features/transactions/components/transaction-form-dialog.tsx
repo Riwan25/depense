@@ -15,6 +15,11 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
   Textarea,
 } from "@repo/ui";
@@ -22,6 +27,7 @@ import type {
   Category,
   CategoryGroup,
   CreateTransactionInput,
+  TransactionBucket,
   TransactionWithCategories,
 } from "@repo/utils";
 import { useHotkey } from "@tanstack/react-hotkeys";
@@ -60,7 +66,7 @@ export function TransactionFormDialog({
   const [value, setValue] = useState("");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [isPositive, setIsPositive] = useState(false);
-  const [isChequeRepas, setIsChequeRepas] = useState(false);
+  const [bucket, setBucket] = useState<TransactionBucket>("MAIN");
 
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
@@ -84,7 +90,7 @@ export function TransactionFormDialog({
       setValue(String(transaction.value));
       setCategoryIds(transaction.categories.map((category) => category.id));
       setIsPositive(transaction.isPositive);
-      setIsChequeRepas(transaction.isChequeRepas);
+      setBucket(transaction.bucket);
       autoFilledDescriptionRef.current = "";
     } else {
       setDescription("");
@@ -93,7 +99,7 @@ export function TransactionFormDialog({
       setValue("");
       setCategoryIds([]);
       setIsPositive(false);
-      setIsChequeRepas(false);
+      setBucket("MAIN");
       autoFilledDescriptionRef.current = "";
     }
     setCategorySearch("");
@@ -204,7 +210,7 @@ export function TransactionFormDialog({
       value: Number(value),
       categoryIds,
       isPositive,
-      isChequeRepas,
+      bucket,
     };
 
     if (isEditing && transaction) {
@@ -389,13 +395,26 @@ export function TransactionFormDialog({
             />
           </Field>
 
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="transaction-cheque-repas">Paid with cheque repas</FieldLabel>
-            <Switch
-              id="transaction-cheque-repas"
-              checked={isChequeRepas}
-              onCheckedChange={setIsChequeRepas}
-            />
+          <Field>
+            <FieldLabel htmlFor="transaction-bucket">Bucket</FieldLabel>
+            <Select
+              value={bucket}
+              onValueChange={(value) => setBucket((value ?? "MAIN") as TransactionBucket)}
+              items={[
+                { value: "MAIN", label: "Main" },
+                { value: "CHEQUE_REPAS", label: "Cheque repas" },
+                { value: "SAVINGS", label: "Savings" },
+              ]}
+            >
+              <SelectTrigger id="transaction-bucket" className="w-full">
+                <SelectValue placeholder="Select a bucket" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MAIN">Main</SelectItem>
+                <SelectItem value="CHEQUE_REPAS">Cheque repas</SelectItem>
+                <SelectItem value="SAVINGS">Savings</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
 
           <DialogFooter>

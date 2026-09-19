@@ -1,6 +1,7 @@
 import type { Prisma } from "@generated/prisma/client";
 import { zValidator } from "@hono/zod-validator";
 import {
+  CreateSavingsTransfer$,
   CreateTransaction$,
   ExpenseByCategoryFilters$,
   TransactionFilters$,
@@ -42,12 +43,12 @@ export const transactionsRoutes = new Hono()
   .use(isAuthenticated)
   .get("/", zValidator("query", TransactionFilters$), async (c) => {
     const user = c.get("user")!;
-    const { from, to, categoryId, isChequeRepas, page, pageSize } = c.req.valid("query");
+    const { from, to, categoryId, bucket, page, pageSize } = c.req.valid("query");
 
     const where: Prisma.TransactionWhereInput = {
       userId: user.id,
       ...(categoryId ? { categories: { some: { id: categoryId } } } : {}),
-      ...(isChequeRepas !== undefined ? { isChequeRepas } : {}),
+      ...(bucket !== undefined ? { bucket } : {}),
       ...(from || to
         ? {
             date: {
@@ -81,6 +82,7 @@ export const transactionsRoutes = new Hono()
 
     let mainBalance = 0;
     let chequeRepasBalance = 0;
+    let savingsBalance = 0;
     const byCategoryMap = new Map<
       string,
       { categoryId: string | null; description: string; isPositive: boolean; total: number }
@@ -91,11 +93,17 @@ export const transactionsRoutes = new Hono()
       const isPositive = transaction.isPositive;
       const signedValue = isPositive ? value : -value;
 
-      if (transaction.isChequeRepas) {
+      if (transaction.bucket === "CHEQUE_REPAS") {
         chequeRepasBalance += signedValue;
+      } else if (transaction.bucket === "SAVINGS") {
+        savingsBalance += signedValue;
       } else {
         mainBalance += signedValue;
       }
+
+      // Transfer legs carry no categories and are a net-zero wash across the
+      // pair; excluding them keeps them out of the "Uncategorized" bucket.
+      if (transaction.transferGroupId) continue;
 
       const categories =
         transaction.categories.length > 0
@@ -121,6 +129,7 @@ export const transactionsRoutes = new Hono()
     return c.json({
       mainBalance,
       chequeRepasBalance,
+      savingsBalance,
       byCategory: Array.from(byCategoryMap.values()),
     });
   })
@@ -133,7 +142,7 @@ export const transactionsRoutes = new Hono()
     since.setHours(0, 0, 0, 0);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId: user.id, date: { gte: since } },
+      where: { userId: user.id, date: { gte: since }, transferGroupId: null },
       include: transactionInclude,
     });
 
@@ -253,6 +262,12 @@ export const transactionsRoutes = new Hono()
     if (!existing) {
       return c.json({ error: "Transaction not found" }, 404);
     }
+    if (existing.transferGroupId) {
+      return c.json(
+        { error: "Transfer transactions cannot be edited. Delete and recreate the transfer instead." },
+        400,
+      );
+    }
 
     let isPositive = data.isPositive;
 
@@ -293,7 +308,68 @@ export const transactionsRoutes = new Hono()
       return c.json({ error: "Transaction not found" }, 404);
     }
 
-    await prisma.transaction.delete({ where: { id } });
+    if (existing.transferGroupId) {
+      await prisma.transaction.deleteMany({
+        where: { transferGroupId: existing.transferGroupId, userId: user.id },
+      });
+    } else {
+      await prisma.transaction.delete({ where: { id } });
+    }
 
     return c.body(null, 204);
+  })
+  .post("/transfer/savings", zValidator("json", CreateSavingsTransfer$), async (c) => {
+    const user = c.get("user")!;
+    const { direction, value, date, comment, categoryIds } = c.req.valid("json");
+
+    if (categoryIds.length > 0) {
+      const count = await prisma.category.count({
+        where: { id: { in: categoryIds }, userId: user.id },
+      });
+      if (count !== new Set(categoryIds).size) {
+        return c.json({ error: "One or more categories not found" }, 400);
+      }
+    }
+
+    const [fromBucket, toBucket] =
+      direction === "MAIN_TO_SAVINGS" ? (["MAIN", "SAVINGS"] as const) : (["SAVINGS", "MAIN"] as const);
+    const description = direction === "MAIN_TO_SAVINGS" ? "Transfer to savings" : "Transfer to main";
+    const transferGroupId = crypto.randomUUID();
+    // Both legs of a transfer represent the same real-world movement, so they
+    // share the same categories even though their isPositive signs differ -
+    // the sign here comes from the direction, not from the categories.
+    const categories = { connect: categoryIds.map((id) => ({ id })) };
+
+    const [fromTransaction, toTransaction] = await prisma.$transaction([
+      prisma.transaction.create({
+        data: {
+          userId: user.id,
+          description,
+          comment,
+          date,
+          value,
+          isPositive: false,
+          bucket: fromBucket,
+          transferGroupId,
+          categories,
+        },
+        include: transactionInclude,
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: user.id,
+          description,
+          comment,
+          date,
+          value,
+          isPositive: true,
+          bucket: toBucket,
+          transferGroupId,
+          categories,
+        },
+        include: transactionInclude,
+      }),
+    ]);
+
+    return c.json({ transferGroupId, transactions: [fromTransaction, toTransaction] }, 201);
   });

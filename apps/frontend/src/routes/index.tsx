@@ -12,10 +12,11 @@ import {
 } from "@repo/ui";
 import type { TransactionWithCategories } from "@repo/utils";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { useCategories } from "@/features/categories/use-categories";
+import { SavingsTransferDialog } from "@/features/transactions/components/savings-transfer-dialog";
 import { TransactionFormDialog } from "@/features/transactions/components/transaction-form-dialog";
 import { TransactionTable } from "@/features/transactions/components/transaction-table";
 import { useTransactions, useTransactionSummary } from "@/features/transactions/use-transactions";
@@ -38,6 +39,7 @@ function Index() {
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategories | null>(
     null,
   );
@@ -87,7 +89,7 @@ function Index() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-muted-foreground text-sm font-medium">
@@ -109,6 +111,18 @@ function Index() {
           <CardContent>
             <p className="text-2xl font-bold">
               {currencyFormatter.format(summary?.chequeRepasBalance ?? 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              Savings balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {currencyFormatter.format(summary?.savingsBalance ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -136,10 +150,16 @@ function Index() {
           </SelectContent>
         </Select>
 
-        <Button onClick={handleAdd}>
-          <Plus className="size-4" />
-          Add transaction
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setTransferOpen(true)}>
+            <ArrowLeftRight className="size-4" />
+            Transfer to/from savings
+          </Button>
+          <Button onClick={handleAdd}>
+            <Plus className="size-4" />
+            Add transaction
+          </Button>
+        </div>
       </div>
 
       <TransactionTable transactions={data?.transactions ?? []} onEdit={handleEdit} />
@@ -149,6 +169,12 @@ function Index() {
         onOpenChange={setFormOpen}
         categories={categories}
         transaction={editingTransaction}
+      />
+
+      <SavingsTransferDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        categories={categories}
       />
     </div>
   );

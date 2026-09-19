@@ -115,21 +115,30 @@ model CategoryGroup {
   @@map("category_group")
 }
 
+enum TransactionBucket {
+  MAIN
+  CHEQUE_REPAS
+  SAVINGS
+}
+
 model Transaction {
-  id            String     @id @default(cuid())
-  userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categories    Category[]
-  description   String
-  comment       String?
-  date          DateTime
-  value         Decimal    @db.Decimal(10, 2)
-  isPositive    Boolean    @default(false)
-  isChequeRepas Boolean    @default(false)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories      Category[]
+  description     String
+  comment         String?
+  date            DateTime
+  value           Decimal           @db.Decimal(10, 2)
+  isPositive      Boolean           @default(false)
+  bucket          TransactionBucket @default(MAIN)
+  // Shared by the two legs of a transfer between buckets; null for ordinary transactions.
+  transferGroupId String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([userId])
   @@index([userId, date])
+  @@index([transferGroupId])
   @@map("transaction")
 }

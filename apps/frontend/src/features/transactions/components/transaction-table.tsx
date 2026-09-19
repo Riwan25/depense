@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import type { TransactionWithCategories } from "@repo/utils";
+import type { TransactionBucket, TransactionWithCategories } from "@repo/utils";
 import { Pencil, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
 
@@ -37,6 +37,12 @@ function formatSignedValue(value: number, isPositive: boolean) {
   const signed = isPositive ? value : -value;
   return currencyFormatter.format(signed);
 }
+
+const bucketRowClass: Record<TransactionBucket, string | undefined> = {
+  MAIN: undefined,
+  CHEQUE_REPAS: "bg-amber-50 dark:bg-amber-950/30",
+  SAVINGS: "bg-sky-50 dark:bg-sky-950/30",
+};
 
 export function TransactionTable({ transactions, onEdit }: TransactionTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -73,21 +79,31 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
               <Fragment key={transaction.id}>
                 <TableRow
                   onClick={() => setExpandedId(isExpanded ? null : transaction.id)}
-                  className={cn(
-                    "cursor-pointer",
-                    transaction.isChequeRepas && "bg-amber-50 dark:bg-amber-950/30",
-                  )}
+                  className={cn("cursor-pointer", bucketRowClass[transaction.bucket])}
                 >
                   <TableCell>{new Date(transaction.date).toLocaleDateString("fr-BE")}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {transaction.description}
-                      {transaction.isChequeRepas && (
+                      {transaction.bucket === "CHEQUE_REPAS" && (
                         <Badge
                           variant="outline"
                           className="border-amber-400 text-amber-700 dark:text-amber-400"
                         >
                           Cheque repas
+                        </Badge>
+                      )}
+                      {transaction.bucket === "SAVINGS" && (
+                        <Badge
+                          variant="outline"
+                          className="border-sky-400 text-sky-700 dark:text-sky-400"
+                        >
+                          Savings
+                        </Badge>
+                      )}
+                      {transaction.transferGroupId && (
+                        <Badge variant="secondary" className="font-normal">
+                          Transfer
                         </Badge>
                       )}
                     </div>
@@ -117,16 +133,18 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(transaction);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {!transaction.transferGroupId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(transaction);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

@@ -1,9 +1,12 @@
 import {
   ExpenseByCategorySummary$,
   MonthlySummary$,
+  SavingsTransferResult$,
   TransactionSummary$,
   TransactionWithCategories$,
+  type CreateSavingsTransferInput,
   type CreateTransactionInput,
+  type TransactionBucket,
   type UpdateTransactionInput,
 } from "@repo/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +27,7 @@ const TRANSACTIONS_SUMMARY_QUERY_KEY = "transactions-summary";
 
 export interface TransactionListFilter {
   categoryId?: string;
-  isChequeRepas?: boolean;
+  bucket?: TransactionBucket;
   page: number;
   pageSize: number;
 }
@@ -36,9 +39,7 @@ export function useTransactions(filter: TransactionListFilter) {
       const res = await apiClient.api.transactions.$get({
         query: {
           ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
-          ...(filter.isChequeRepas !== undefined
-            ? { isChequeRepas: String(filter.isChequeRepas) }
-            : {}),
+          ...(filter.bucket ? { bucket: filter.bucket } : {}),
           page: String(filter.page),
           pageSize: String(filter.pageSize),
         },
@@ -150,6 +151,23 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       invalidate();
       toast.success("Transaction updated");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+}
+
+export function useCreateSavingsTransfer() {
+  const invalidate = useInvalidateTransactions();
+
+  return useMutation({
+    mutationFn: async (data: CreateSavingsTransferInput) => {
+      const res = await apiClient.api.transactions.transfer.savings.$post({ json: data });
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to create transfer"));
+      return SavingsTransferResult$.parse(await res.json());
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Transfer recorded");
     },
     onError: (error: Error) => toast.error(error.message),
   });
