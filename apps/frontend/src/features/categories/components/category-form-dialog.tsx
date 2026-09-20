@@ -158,7 +158,7 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit category" : "Add category"}</DialogTitle>
           <DialogDescription>

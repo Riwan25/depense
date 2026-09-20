@@ -119,14 +119,14 @@ export function ExpenseCategoryPieChart() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-wrap items-center justify-between gap-4">
+      <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
         <CardTitle>Expenses by category</CardTitle>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="w-40"
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
             aria-label="Start date"
           />
           <span className="text-muted-foreground text-sm">to</span>
@@ -134,16 +134,16 @@ export function ExpenseCategoryPieChart() {
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="w-40"
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
             aria-label="End date"
           />
           <Popover>
-            <PopoverTrigger render={<Button variant="outline" />}>
+            <PopoverTrigger render={<Button variant="outline" className="w-full sm:w-auto" />}>
               {selectedCategoryIds.length === expenseCategories.length
                 ? "All categories"
                 : `${selectedCategoryIds.length} of ${expenseCategories.length} categories`}
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-64">
+            <PopoverContent align="end" className="w-[min(16rem,calc(100vw-2rem))]">
               {expenseCategories.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No expense categories yet.</p>
               ) : (
@@ -178,7 +178,7 @@ export function ExpenseCategoryPieChart() {
             No expenses for the selected categories and period.
           </p>
         ) : (
-          <ChartContainer config={chartConfig} className="mx-auto h-80 w-full max-w-md">
+          <ChartContainer config={chartConfig} className="mx-auto h-72 w-full max-w-md sm:h-80">
             <PieChart>
               <ChartTooltip
                 content={

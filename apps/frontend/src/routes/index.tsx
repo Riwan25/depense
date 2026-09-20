@@ -9,10 +9,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  cn,
 } from "@repo/ui";
 import type { TransactionWithCategories } from "@repo/utils";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeftRight, Plus } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { ArrowLeftRight, Plus, PiggyBank, Ticket, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { useCategories } from "@/features/categories/use-categories";
@@ -20,7 +21,6 @@ import { SavingsTransferDialog } from "@/features/transactions/components/saving
 import { TransactionFormDialog } from "@/features/transactions/components/transaction-form-dialog";
 import { TransactionTable } from "@/features/transactions/components/transaction-table";
 import { useTransactions, useTransactionSummary } from "@/features/transactions/use-transactions";
-import { signOut, useSession } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -34,9 +34,6 @@ const currencyFormatter = new Intl.NumberFormat("fr-BE", {
 });
 
 function Index() {
-  const { data: session } = useSession();
-  const navigate = useNavigate();
-
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -62,73 +59,56 @@ function Index() {
     setFormOpen(true);
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/login" });
-  };
+  const balances = [
+    {
+      key: "main",
+      label: "Main balance",
+      value: summary?.mainBalance ?? 0,
+      icon: Wallet,
+      accent: "bg-primary/15 text-primary",
+    },
+    {
+      key: "chequeRepas",
+      label: "Cheque repas",
+      value: summary?.chequeRepasBalance ?? 0,
+      icon: Ticket,
+      accent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    },
+    {
+      key: "savings",
+      label: "Savings",
+      value: summary?.savingsBalance ?? 0,
+      icon: PiggyBank,
+      accent: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+    },
+  ] as const;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Expenses</h1>
-          {session?.user && (
-            <p className="text-muted-foreground text-sm">Signed in as {session.user.email}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Link to="/dashboard">
-            <Button variant="outline">Dashboard</Button>
-          </Link>
-          <Link to="/categories">
-            <Button variant="outline">Categories</Button>
-          </Link>
-          <Button variant="outline" onClick={handleSignOut}>
-            Sign out
-          </Button>
-        </div>
+    <div className="pb-safe mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
+      <div>
+        <h1 className="font-heading text-xl font-bold sm:text-2xl">Expenses</h1>
+        <p className="text-muted-foreground text-sm">Your latest transactions and balances.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground text-sm font-medium">
-              Main balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {currencyFormatter.format(summary?.mainBalance ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground text-sm font-medium">
-              Cheque repas balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {currencyFormatter.format(summary?.chequeRepasBalance ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground text-sm font-medium">
-              Savings balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {currencyFormatter.format(summary?.savingsBalance ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        {balances.map(({ key, label, value, icon: Icon, accent }) => (
+          <Card key={key} size="sm">
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0">
+              <span className={cn("flex size-7 items-center justify-center rounded-lg", accent)}>
+                <Icon className="size-4" />
+              </span>
+              <CardTitle className="text-muted-foreground text-sm font-medium">{label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold tabular-nums sm:text-2xl">
+                {currencyFormatter.format(value)}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Select
           value={categoryFilter}
           onValueChange={(value) => setCategoryFilter(value ?? "all")}
@@ -137,7 +117,7 @@ function Index() {
             ...categories.map((category) => ({ value: category.id, label: category.description })),
           ]}
         >
-          <SelectTrigger className="w-56">
+          <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
@@ -151,13 +131,19 @@ function Index() {
         </Select>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setTransferOpen(true)}>
+          <Button
+            variant="outline"
+            className="flex-1 sm:flex-none"
+            onClick={() => setTransferOpen(true)}
+          >
             <ArrowLeftRight className="size-4" />
-            Transfer to/from savings
+            <span className="sm:hidden">Transfer</span>
+            <span className="hidden sm:inline">Transfer to/from savings</span>
           </Button>
-          <Button onClick={handleAdd}>
+          <Button className="flex-1 sm:flex-none" onClick={handleAdd}>
             <Plus className="size-4" />
-            Add transaction
+            <span className="sm:hidden">Add</span>
+            <span className="hidden sm:inline">Add transaction</span>
           </Button>
         </div>
       </div>

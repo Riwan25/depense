@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@repo/ui";
 import type { Category } from "@repo/utils";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +27,33 @@ import { useCategories, useDeleteCategory } from "@/features/categories/use-cate
 export const Route = createFileRoute("/categories")({
   component: CategoriesPage,
 });
+
+function CategoryTypeBadges({ category }: { category: Category }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      <Badge variant={category.isPositive ? "default" : "secondary"}>
+        {category.isPositive ? "Income" : "Expense"}
+      </Badge>
+      {category.isDefault && <Badge variant="outline">Default</Badge>}
+    </div>
+  );
+}
+
+function GroupBadges({ category }: { category: Category }) {
+  if (!category.group || category.group.categories.length <= 1) return null;
+
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {category.group.categories
+        .filter((member) => member.id !== category.id)
+        .map((member) => (
+          <Badge key={member.id} variant="outline" className="font-normal">
+            {member.description}
+          </Badge>
+        ))}
+    </div>
+  );
+}
 
 function CategoriesPage() {
   const { data: categories = [], isPending } = useCategories();
@@ -54,13 +81,11 @@ function CategoriesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="pb-safe mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Categories</h1>
-          <Link to="/" className="text-muted-foreground text-sm underline-offset-4 hover:underline">
-            &larr; Back to transactions
-          </Link>
+          <h1 className="font-heading text-xl font-bold sm:text-2xl">Categories</h1>
+          <p className="text-muted-foreground text-sm">Labels used to sort your transactions.</p>
         </div>
         <Button onClick={handleAdd}>
           <Plus className="size-4" />
@@ -71,57 +96,93 @@ function CategoriesPage() {
       {isPending ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
       ) : categories.length === 0 ? (
-        <p className="text-muted-foreground py-8 text-center text-sm">
+        <p className="text-muted-foreground rounded-xl border border-dashed py-10 text-center text-sm">
           No categories yet. Add one to start tracking transactions.
         </p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Description</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="w-24" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobile: stacked cards instead of a table. */}
+          <div className="flex flex-col gap-2 md:hidden">
             {categories.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell>
-                  <div>{category.description}</div>
-                  {category.group && category.group.categories.length > 1 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {category.group.categories
-                        .filter((member) => member.id !== category.id)
-                        .map((member) => (
-                          <Badge key={member.id} variant="outline" className="font-normal">
-                            {member.description}
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge variant={category.isPositive ? "default" : "secondary"}>
-                      {category.isPositive ? "Income" : "Expense"}
-                    </Badge>
-                    {category.isDefault && <Badge variant="outline">Default</Badge>}
+              <div
+                key={category.id}
+                className="bg-card ring-foreground/10 flex items-start gap-3 rounded-xl p-3 ring-1"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{category.description}</p>
+                  <div className="mt-1">
+                    <CategoryTypeBadges category={category} />
                   </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(category.id)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                  <GroupBadges category={category} />
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Edit category"
+                    onClick={() => handleEdit(category)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Delete category"
+                    onClick={() => setDeleteId(category.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Desktop: full table. */}
+          <div className="ring-foreground/10 hidden overflow-hidden rounded-xl ring-1 md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead>Description</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="w-24" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>
+                      <div>{category.description}</div>
+                      <GroupBadges category={category} />
+                    </TableCell>
+                    <TableCell>
+                      <CategoryTypeBadges category={category} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Edit category"
+                          onClick={() => handleEdit(category)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Delete category"
+                          onClick={() => setDeleteId(category.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <CategoryFormDialog open={formOpen} onOpenChange={setFormOpen} category={editingCategory} />
