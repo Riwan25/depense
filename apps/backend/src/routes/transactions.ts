@@ -18,7 +18,10 @@ const transactionInclude = {
   categories: { select: { id: true, description: true, isPositive: true } },
 } as const;
 
-async function validateCategoryIds(userId: string, categoryIds: string[]) {
+// The savings bucket is exempt from the single-type rule: a savings move can
+// be tagged with both income and expense categories, and its sign is whatever
+// the caller asked for rather than the categories'.
+async function validateCategoryIds(userId: string, categoryIds: string[], allowMixedTypes = false) {
   if (categoryIds.length === 0) {
     return { ok: true as const, categories: [] };
   }
@@ -31,7 +34,7 @@ async function validateCategoryIds(userId: string, categoryIds: string[]) {
   if (categories.length !== new Set(categoryIds).size) {
     return { ok: false as const, error: "One or more categories not found" };
   }
-  if (new Set(categories.map((category) => category.isPositive)).size > 1) {
+  if (!allowMixedTypes && new Set(categories.map((category) => category.isPositive)).size > 1) {
     return {
       ok: false as const,
       error: "A transaction's categories must be all income or all expense",
@@ -240,7 +243,9 @@ export const transactionsRoutes = new Hono()
     const user = c.get("user")!;
     const { categoryIds, ...data } = c.req.valid("json");
 
-    const validation = await validateCategoryIds(user.id, categoryIds);
+    const isSavings = data.bucket === "SAVINGS";
+
+    const validation = await validateCategoryIds(user.id, categoryIds, isSavings);
     if (!validation.ok) {
       return c.json({ error: validation.error }, 400);
     }
@@ -248,7 +253,7 @@ export const transactionsRoutes = new Hono()
     // Once categories are picked, the transaction's sign is locked to theirs
     // rather than whatever was passed in.
     const isPositive =
-      categoryIds.length > 0 ? validation.categories[0]!.isPositive : data.isPositive;
+      !isSavings && categoryIds.length > 0 ? validation.categories[0]!.isPositive : data.isPositive;
 
     const transaction = await prisma.transaction.create({
       data: {
@@ -284,15 +289,30 @@ export const transactionsRoutes = new Hono()
       );
     }
 
+    const isSavings = (data.bucket ?? existing.bucket) === "SAVINGS";
     let isPositive = data.isPositive;
 
     if (categoryIds !== undefined) {
-      const validation = await validateCategoryIds(user.id, categoryIds);
+      const validation = await validateCategoryIds(user.id, categoryIds, isSavings);
       if (!validation.ok) {
         return c.json({ error: validation.error }, 400);
       }
-      isPositive = categoryIds.length > 0 ? validation.categories[0]!.isPositive : data.isPositive;
-    } else if (existing.categories.length > 0) {
+      isPositive =
+        !isSavings && categoryIds.length > 0
+          ? validation.categories[0]!.isPositive
+          : data.isPositive;
+    } else if (!isSavings && existing.categories.length > 0) {
+      // Moving a savings transaction to another bucket without resending its
+      // categories can drag a mix the target bucket doesn't allow.
+      if (new Set(existing.categories.map((category) => category.isPositive)).size > 1) {
+        return c.json(
+          {
+            error:
+              "A transaction's categories must be all income or all expense outside the savings bucket",
+          },
+          400,
+        );
+      }
       // Categories aren't being touched and already lock the sign: ignore
       // any isPositive passed in.
       isPositive = existing.isPositive;

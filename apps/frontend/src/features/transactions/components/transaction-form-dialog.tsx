@@ -131,13 +131,18 @@ export function TransactionFormDialog({
     }
   };
 
+  const isSavings = bucket === "SAVINGS";
+
   // A transaction's categories must all be income or all be expense, so once
   // any category is picked, the pickers only offer more of the same type and
-  // the income/expense switch is locked to match.
+  // the income/expense switch is locked to match. The savings bucket is exempt:
+  // a savings move can carry categories of both types and its income/expense
+  // sign stays the user's to choose.
   const selectedType = useMemo(() => {
+    if (isSavings) return null;
     const selected = categories.find((category) => categoryIds.includes(category.id));
     return selected?.isPositive ?? null;
-  }, [categories, categoryIds]);
+  }, [categories, categoryIds, isSavings]);
 
   useEffect(() => {
     if (selectedType !== null) setIsPositive(selectedType);
@@ -174,6 +179,11 @@ export function TransactionFormDialog({
   );
 
   const selectedCategories = categories.filter((category) => categoryIds.includes(category.id));
+
+  // Only reachable by picking mixed categories under SAVINGS and then switching
+  // bucket; the other buckets reject the mix server-side.
+  const hasMixedCategoryTypes =
+    new Set(selectedCategories.map((category) => category.isPositive)).size > 1;
 
   const toggleCategory = (category: Category, checked: boolean) => {
     setCategoryIds((current) =>
@@ -223,7 +233,8 @@ export function TransactionFormDialog({
   };
 
   const isPending = createTransaction.isPending || updateTransaction.isPending;
-  const isValid = description.trim() && Number(value) > 0 && date;
+  const isValid =
+    description.trim() && Number(value) > 0 && date && !(hasMixedCategoryTypes && !isSavings);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -339,6 +350,12 @@ export function TransactionFormDialog({
                 </PopoverContent>
               </Popover>
             </div>
+            {hasMixedCategoryTypes && !isSavings && (
+              <p className="text-destructive text-sm">
+                Only the savings bucket can mix income and expense categories. Remove the ones that
+                don't belong, or switch the bucket back to Savings.
+              </p>
+            )}
           </Field>
 
           <Field orientation="horizontal">
@@ -355,6 +372,12 @@ export function TransactionFormDialog({
           {selectedType !== null && (
             <p className="text-muted-foreground -mt-2 text-sm">
               Locked to the type of the selected categories.
+            </p>
+          )}
+          {isSavings && (
+            <p className="text-muted-foreground -mt-2 text-sm">
+              Savings transactions can mix income and expense categories, and keep whichever
+              direction you pick here.
             </p>
           )}
 
