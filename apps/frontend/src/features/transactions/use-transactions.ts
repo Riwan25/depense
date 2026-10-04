@@ -26,6 +26,8 @@ const TRANSACTIONS_QUERY_KEY = "transactions";
 const TRANSACTIONS_SUMMARY_QUERY_KEY = "transactions-summary";
 
 export interface TransactionListFilter {
+  from?: Date;
+  to?: Date;
   categoryId?: string;
   bucket?: TransactionBucket;
   page: number;
@@ -38,6 +40,8 @@ export function useTransactions(filter: TransactionListFilter) {
     queryFn: async () => {
       const res = await apiClient.api.transactions.$get({
         query: {
+          ...(filter.from ? { from: filter.from.toISOString() } : {}),
+          ...(filter.to ? { to: filter.to.toISOString() } : {}),
           ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
           ...(filter.bucket ? { bucket: filter.bucket } : {}),
           page: String(filter.page),

@@ -4,6 +4,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -13,7 +14,7 @@ import {
 } from "@repo/ui";
 import type { TransactionWithCategories } from "@repo/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, Plus, PiggyBank, Ticket, Wallet } from "lucide-react";
+import { ArrowLeftRight, Plus, PiggyBank, Ticket, Wallet, X } from "lucide-react";
 import { useState } from "react";
 
 import { useCategories } from "@/features/categories/use-categories";
@@ -35,6 +36,9 @@ const currencyFormatter = new Intl.NumberFormat("fr-BE", {
 
 function Index() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  // Empty by default: the list shows every transaction until a range is picked.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithCategories | null>(
@@ -44,6 +48,9 @@ function Index() {
   const { data: categories = [] } = useCategories();
   const { data: summary } = useTransactionSummary();
   const { data } = useTransactions({
+    from: from ? new Date(from) : undefined,
+    // The bound is inclusive of the whole end day, not midnight on it.
+    to: to ? new Date(new Date(to).setHours(23, 59, 59, 999)) : undefined,
     categoryId: categoryFilter === "all" ? undefined : categoryFilter,
     page: 1,
     pageSize: PAGE_SIZE,
@@ -108,43 +115,81 @@ function Index() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Select
-          value={categoryFilter}
-          onValueChange={(value) => setCategoryFilter(value ?? "all")}
-          items={[
-            { value: "all", label: "All categories" },
-            ...categories.map((category) => ({ value: category.id, label: category.description })),
-          ]}
-        >
-          <SelectTrigger className="w-full sm:w-56">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.description}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
+            aria-label="From date"
+          />
+          <span className="text-muted-foreground text-sm">to</span>
+          <Input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
+            aria-label="To date"
+          />
+          {(from || to) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Clear date filter"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
+              <X className="size-4" />
+            </Button>
+          )}
+        </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1 sm:flex-none"
-            onClick={() => setTransferOpen(true)}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => setCategoryFilter(value ?? "all")}
+            items={[
+              { value: "all", label: "All categories" },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.description,
+              })),
+            ]}
           >
-            <ArrowLeftRight className="size-4" />
-            <span className="sm:hidden">Transfer</span>
-            <span className="hidden sm:inline">Transfer to/from savings</span>
-          </Button>
-          <Button className="flex-1 sm:flex-none" onClick={handleAdd}>
-            <Plus className="size-4" />
-            <span className="sm:hidden">Add</span>
-            <span className="hidden sm:inline">Add transaction</span>
-          </Button>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.description}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => setTransferOpen(true)}
+            >
+              <ArrowLeftRight className="size-4" />
+              <span className="sm:hidden">Transfer</span>
+              <span className="hidden sm:inline">Transfer to/from savings</span>
+            </Button>
+            <Button className="flex-1 sm:flex-none" onClick={handleAdd}>
+              <Plus className="size-4" />
+              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">Add transaction</span>
+            </Button>
+          </div>
         </div>
       </div>
 
