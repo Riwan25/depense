@@ -8,6 +8,7 @@ import {
   UpdateTransaction$,
   YearlySummaryFilters$,
   type MonthlySummary,
+  type YearlySummaryTotals,
 } from "@repo/utils";
 import { Hono } from "hono";
 
@@ -146,7 +147,7 @@ export const transactionsRoutes = new Hono()
     const end = new Date(year + 1, 0, 1);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId: user.id, date: { gte: start, lt: end }, bucket: { not: "SAVINGS" } },
+      where: { userId: user.id, date: { gte: start, lt: end } },
     });
 
     const months: MonthlySummary[] = Array.from({ length: 12 }, (_, i) => ({
@@ -155,14 +156,32 @@ export const transactionsRoutes = new Hono()
       mainExpense: 0,
       chequeRepasIncome: 0,
       chequeRepasExpense: 0,
+      savings: 0,
     }));
-    const totals = { mainIncome: 0, mainExpense: 0, chequeRepasIncome: 0, chequeRepasExpense: 0 };
+    const totals: YearlySummaryTotals = {
+      mainIncome: 0,
+      mainExpense: 0,
+      chequeRepasIncome: 0,
+      chequeRepasExpense: 0,
+      savings: 0,
+    };
 
     for (const transaction of transactions) {
       const date = new Date(transaction.date);
       const entry = months[date.getMonth()]!;
       const value = Number(transaction.value);
       const isChequeRepas = transaction.bucket === "CHEQUE_REPAS";
+
+      // The savings bucket is its own net series rather than income/expense:
+      // its transfer leg pairs with a main-bucket leg that is already counted
+      // on the expense side, which is the point - "spent X, of which Y went
+      // to savings".
+      if (transaction.bucket === "SAVINGS") {
+        const signedValue = transaction.isPositive ? value : -value;
+        entry.savings += signedValue;
+        totals.savings += signedValue;
+        continue;
+      }
 
       if (transaction.isPositive) {
         if (isChequeRepas) {

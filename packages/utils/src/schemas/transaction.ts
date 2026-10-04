@@ -82,6 +82,10 @@ export const MonthlySummary$ = z.object({
   mainExpense: z.number(),
   chequeRepasIncome: z.number(),
   chequeRepasExpense: z.number(),
+  // Net movement of the savings bucket - money in minus money out - so a month
+  // that drew savings down is negative. Not split by bucket: the savings
+  // bucket has no cheque repas side.
+  savings: z.number(),
 });
 export type MonthlySummary = z.infer<typeof MonthlySummary$>;
 
@@ -90,6 +94,7 @@ export const YearlySummaryTotals$ = z.object({
   mainExpense: z.number(),
   chequeRepasIncome: z.number(),
   chequeRepasExpense: z.number(),
+  savings: z.number(),
 });
 export type YearlySummaryTotals = z.infer<typeof YearlySummaryTotals$>;
 

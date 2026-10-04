@@ -5,12 +5,14 @@ import {
   CardHeader,
   CardTitle,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@repo/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -26,6 +28,7 @@ const trendConfig = {
   chequeRepasIncome: { label: "Income (cheque repas)", color: "#6ee7b7" },
   mainExpense: { label: "Expense (main)", color: "#ef4444" },
   chequeRepasExpense: { label: "Expense (cheque repas)", color: "#fca5a5" },
+  savings: { label: "Savings (net)", color: "#2563eb" },
 } satisfies ChartConfig;
 
 const currencyFormatter = new Intl.NumberFormat("fr-BE", {
@@ -50,6 +53,7 @@ function DashboardPage() {
     mainExpense: 0,
     chequeRepasIncome: 0,
     chequeRepasExpense: 0,
+    savings: 0,
   };
   const totalIncome = totals.mainIncome + totals.chequeRepasIncome;
   const totalExpense = totals.mainExpense + totals.chequeRepasExpense;
@@ -83,7 +87,7 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <Card size="sm">
           <CardHeader className="flex flex-row items-center gap-2 space-y-0">
             <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
@@ -122,6 +126,24 @@ function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        <Card size="sm">
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+              <PiggyBank className="size-4" />
+            </span>
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              Savings ({year})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xl font-bold tabular-nums sm:text-2xl">
+              {currencyFormatter.format(totals.savings)}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+              Net of everything moved in and out of savings
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -146,6 +168,7 @@ function DashboardPage() {
                 tickFormatter={(value: number) => compactCurrencyFormatter.format(value)}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
               <Bar
                 dataKey="mainIncome"
                 stackId="income"
@@ -170,6 +193,7 @@ function DashboardPage() {
                 fill="var(--color-chequeRepasExpense)"
                 radius={[4, 4, 0, 0]}
               />
+              <Bar dataKey="savings" fill="var(--color-savings)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </CardContent>
