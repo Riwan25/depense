@@ -24,6 +24,7 @@ model User {
   categories     Category[]
   categoryGroups CategoryGroup[]
   transactions   Transaction[]
+  dashboards     Dashboard[]
 
   @@unique([email])
   @@map("user")
@@ -141,4 +142,52 @@ model Transaction {
   @@index([userId, date])
   @@index([transferGroupId])
   @@map("transaction")
+}
+
+enum DashboardWidgetType {
+  CATEGORY_PIE
+  BUCKET_TREND
+  CATEGORY_STAT
+  YEARLY_BAR
+  BUCKET_MONTHLY_DIFF
+  YEAR_TOTALS
+}
+
+enum DashboardWidgetWidth {
+  HALF
+  FULL
+}
+
+// A user-built stats page. Widgets are ordered by `position` within it.
+model Dashboard {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int               @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  widgets   DashboardWidget[]
+
+  @@index([userId])
+  @@map("dashboard")
+}
+
+model DashboardWidget {
+  id          String               @id @default(cuid())
+  dashboardId String
+  dashboard   Dashboard            @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  title       String
+  // Mirrors `config.type`; kept as a column so widgets can be filtered and
+  // counted without parsing the JSON.
+  type        DashboardWidgetType
+  width       DashboardWidgetWidth @default(FULL)
+  position    Int                  @default(0)
+  // Shape depends on `type` - see DashboardWidgetConfig$ in @repo/utils.
+  config      Json
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([dashboardId])
+  @@map("dashboard_widget")
 }

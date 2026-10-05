@@ -8,7 +8,9 @@ import { useLoggerContext } from "@/middlewares/use-logger-context";
 
 import { categoriesRoutes } from "./categories";
 import { categoryGroupsRoutes } from "./category-groups";
+import { dashboardsRoutes } from "./dashboards";
 import { healthRoutes } from "./health";
+import { statsRoutes } from "./stats";
 import { transactionsRoutes } from "./transactions";
 
 export const routes = new Hono()
@@ -29,6 +31,8 @@ export const routes = new Hono()
   .route("/categories", categoriesRoutes)
   .route("/category-groups", categoryGroupsRoutes)
   .route("/transactions", transactionsRoutes)
+  .route("/dashboards", dashboardsRoutes)
+  .route("/stats", statsRoutes)
 
   //////////////////////////////////////////////////
   // Global error handler
