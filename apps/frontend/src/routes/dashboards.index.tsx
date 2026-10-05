@@ -30,7 +30,7 @@ function DashboardsIndexPage() {
   return (
     <div className="pb-safe mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
       <div>
-        <h1 className="font-heading text-xl font-bold sm:text-2xl">Dashboards</h1>
+        <h1 className="font-heading text-xl font-bold sm:text-2xl">Stats</h1>
         <p className="text-muted-foreground text-sm">
           Your own stats pages, built from the widgets you pick.
         </p>

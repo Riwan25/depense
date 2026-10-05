@@ -34,7 +34,6 @@ function CategoryTypeBadges({ category }: { category: Category }) {
       <Badge variant={category.isPositive ? "default" : "secondary"}>
         {category.isPositive ? "Income" : "Expense"}
       </Badge>
-      {category.isDefault && <Badge variant="outline">Default</Badge>}
     </div>
   );
 }

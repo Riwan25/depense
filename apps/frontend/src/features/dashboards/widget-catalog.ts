@@ -1,7 +1,6 @@
 import {
   DEFAULT_STAT_BUCKETS,
   type DashboardWidgetConfig,
-  type DashboardWidgetType,
   type StatAverage,
   type StatFlow,
   type StatMetric,
@@ -38,15 +37,6 @@ export const METRIC_LABELS: Record<StatMetric, string> = {
   INCOME: "Money in",
   EXPENSE: "Money out",
   BALANCE: "Running balance",
-};
-
-export const WIDGET_TYPE_LABELS: Record<DashboardWidgetType, string> = {
-  CATEGORY_PIE: "Pie chart",
-  BUCKET_TREND: "Line chart",
-  CATEGORY_STAT: "Single figure",
-  YEARLY_BAR: "Year bar chart",
-  BUCKET_MONTHLY_DIFF: "Monthly difference",
-  YEAR_TOTALS: "Year totals",
 };
 
 export const CATEGORICAL_COLORS = [
@@ -93,7 +83,6 @@ export interface WidgetBlueprint {
 }
 
 const defaultPeriod = { preset: "THIS_MONTH" as const, from: null, to: null };
-const yearPeriod = { preset: "THIS_YEAR" as const, from: null, to: null };
 
 export const WIDGET_BLUEPRINTS: WidgetBlueprint[] = [
   {
@@ -188,5 +177,3 @@ export const WIDGET_BLUEPRINTS: WidgetBlueprint[] = [
     },
   },
 ];
-
-export { defaultPeriod, yearPeriod };

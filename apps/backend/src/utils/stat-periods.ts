@@ -3,15 +3,15 @@ import type { StatGranularity } from "@repo/utils";
 // Transaction dates are stored as UTC midnight of the day that was picked, so
 // every bucketing key here is derived in UTC.
 
-export function dayKey(date: Date) {
+function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export function monthKey(date: Date) {
+function monthKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-export function yearKey(date: Date) {
+function yearKey(date: Date) {
   return String(date.getUTCFullYear());
 }
 
@@ -39,7 +39,7 @@ export function monthsBetween(start: Date, end: Date) {
 
 // A daily series over a decade is already 3 650 points; past that the chart is
 // unreadable anyway, so the walk is bounded rather than left open-ended.
-export const MAX_PERIOD_POINTS = 4000;
+const MAX_PERIOD_POINTS = 4000;
 
 const DAY_MS = 86_400_000;
 

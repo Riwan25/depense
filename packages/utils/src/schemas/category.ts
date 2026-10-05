@@ -25,7 +25,6 @@ export const Category$ = z.object({
   userId: BetterAuthId$,
   description: z.string().trim().min(1),
   isPositive: Boolean$,
-  isDefault: Boolean$.default(false),
   createdAt: Date$,
   updatedAt: Date$,
   // The group auto-created for this category when it was given sub-categories,
@@ -37,7 +36,6 @@ export type Category = z.infer<typeof Category$>;
 export const CreateCategory$ = Category$.pick({
   description: true,
   isPositive: true,
-  isDefault: true,
 }).extend({
   subCategoryIds: z.array(z.string().trim()).optional(),
 });

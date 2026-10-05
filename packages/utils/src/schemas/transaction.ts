@@ -111,34 +111,6 @@ export const YearlySummaryFilters$ = z.object({
 export type YearlySummaryFilters = z.infer<typeof YearlySummaryFilters$>;
 export type YearlySummaryFiltersInput = z.input<typeof YearlySummaryFilters$>;
 
-export const ExpenseByCategoryFilters$ = z.object({
-  from: Date$.optional(),
-  to: Date$.optional(),
-  // Comma-separated category ids. A transaction counts toward every one of
-  // these it's tagged with (intentional overlap), but toward `otherTotal` at
-  // most once, however many non-selected categories it also carries.
-  categoryIds: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v ? v.split(",").filter(Boolean) : undefined)),
-});
-export type ExpenseByCategoryFilters = z.infer<typeof ExpenseByCategoryFilters$>;
-export type ExpenseByCategoryFiltersInput = z.input<typeof ExpenseByCategoryFilters$>;
-
-export const ExpenseByCategoryEntry$ = z.object({
-  categoryId: z.string().trim(),
-  description: z.string().trim(),
-  total: z.number(),
-});
-export type ExpenseByCategoryEntry = z.infer<typeof ExpenseByCategoryEntry$>;
-
-export const ExpenseByCategorySummary$ = z.object({
-  byCategory: z.array(ExpenseByCategoryEntry$),
-  otherTotal: z.number(),
-});
-export type ExpenseByCategorySummary = z.infer<typeof ExpenseByCategorySummary$>;
-
 export const SavingsTransferDirection$ = z.enum(["MAIN_TO_SAVINGS", "SAVINGS_TO_MAIN"]);
 export type SavingsTransferDirection = z.infer<typeof SavingsTransferDirection$>;
 

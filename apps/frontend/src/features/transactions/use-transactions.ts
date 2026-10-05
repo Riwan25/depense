@@ -1,5 +1,4 @@
 import {
-  ExpenseByCategorySummary$,
   SavingsTransferResult$,
   TransactionSummary$,
   TransactionWithCategories$,
@@ -87,35 +86,6 @@ export function useTransactionYearlySummary(year: number) {
       return YearlySummary$.parse(await res.json());
     },
     staleTime: 30_000,
-  });
-}
-
-export interface ExpenseByCategoryFilter {
-  from?: Date;
-  to?: Date;
-  categoryIds: string[];
-}
-
-export function useExpenseByCategory(filter: ExpenseByCategoryFilter) {
-  return useQuery({
-    queryKey: [
-      "transactions-summary-by-category",
-      filter.from?.toISOString(),
-      filter.to?.toISOString(),
-      [...filter.categoryIds].sort(),
-    ],
-    queryFn: async () => {
-      const res = await apiClient.api.transactions.summary["by-category"].$get({
-        query: {
-          ...(filter.from ? { from: filter.from.toISOString() } : {}),
-          ...(filter.to ? { to: filter.to.toISOString() } : {}),
-          ...(filter.categoryIds.length > 0 ? { categoryIds: filter.categoryIds.join(",") } : {}),
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch expense summary");
-      return ExpenseByCategorySummary$.parse(await res.json());
-    },
-    staleTime: 10_000,
   });
 }
 

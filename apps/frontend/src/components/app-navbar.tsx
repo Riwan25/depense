@@ -1,14 +1,13 @@
 import { Button, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger, cn } from "@repo/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChartPie, LayoutDashboard, LogOut, Menu, Tags, Wallet } from "lucide-react";
+import { ChartPie, LogOut, Menu, Tags, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { signOut, useSession } from "@/lib/auth-client";
 
 const navItems = [
   { to: "/", label: "Home", icon: Wallet, exact: true },
-  { to: "/dashboard", label: "Stats", icon: ChartPie, exact: false },
-  { to: "/dashboards", label: "Dashboards", icon: LayoutDashboard, exact: false },
+  { to: "/dashboards", label: "Stats", icon: ChartPie, exact: false },
   { to: "/categories", label: "Categories", icon: Tags, exact: false },
 ] as const;
 

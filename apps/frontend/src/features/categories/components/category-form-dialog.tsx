@@ -40,7 +40,6 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
 
   const [description, setDescription] = useState("");
   const [isPositive, setIsPositive] = useState(false);
-  const [isDefault, setIsDefault] = useState(false);
   const [subCategoryIds, setSubCategoryIds] = useState<string[]>([]);
 
   const [subCategoryPopoverOpen, setSubCategoryPopoverOpen] = useState(false);
@@ -55,7 +54,6 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
     if (!open) return;
     setDescription(category?.description ?? "");
     setIsPositive(category?.isPositive ?? false);
-    setIsDefault(category?.isDefault ?? false);
     setSubCategoryIds(
       category?.group?.categories.filter((c) => c.id !== category.id).map((c) => c.id) ?? [],
     );
@@ -143,7 +141,7 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const data = { description: description.trim(), isPositive, isDefault, subCategoryIds };
+    const data = { description: description.trim(), isPositive, subCategoryIds };
 
     if (isEditing && category) {
       await updateCategory.mutateAsync({ id: category.id, data });
@@ -185,13 +183,6 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
               checked={isPositive}
               onCheckedChange={setIsPositive}
             />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="category-is-default">
-              Show by default on the expense chart
-            </FieldLabel>
-            <Switch id="category-is-default" checked={isDefault} onCheckedChange={setIsDefault} />
           </Field>
 
           <Field>

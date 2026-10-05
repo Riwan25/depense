@@ -3,7 +3,6 @@ import { zValidator } from "@hono/zod-validator";
 import {
   CreateSavingsTransfer$,
   CreateTransaction$,
-  ExpenseByCategoryFilters$,
   TransactionFilters$,
   UpdateTransaction$,
   YearlySummaryFilters$,
@@ -203,60 +202,6 @@ export const transactionsRoutes = new Hono()
     }
 
     return c.json({ year, months, totals });
-  })
-  .get("/summary/by-category", zValidator("query", ExpenseByCategoryFilters$), async (c) => {
-    const user = c.get("user")!;
-    const { from, to, categoryIds } = c.req.valid("query");
-    const selectedIds = new Set(categoryIds ?? []);
-
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId: user.id,
-        isPositive: false,
-        ...(from || to
-          ? {
-              date: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
-      },
-      include: transactionInclude,
-    });
-
-    const byCategoryMap = new Map<
-      string,
-      { categoryId: string; description: string; total: number }
-    >();
-    let otherTotal = 0;
-
-    for (const transaction of transactions) {
-      const value = Number(transaction.value);
-      const matching = transaction.categories.filter((category) => selectedIds.has(category.id));
-
-      if (matching.length === 0) {
-        // No tagged category is selected (including no categories at all):
-        // count the transaction once, however many other tags it carries.
-        otherTotal += value;
-        continue;
-      }
-
-      for (const category of matching) {
-        const existing = byCategoryMap.get(category.id);
-        if (existing) {
-          existing.total += value;
-        } else {
-          byCategoryMap.set(category.id, {
-            categoryId: category.id,
-            description: category.description,
-            total: value,
-          });
-        }
-      }
-    }
-
-    return c.json({ byCategory: Array.from(byCategoryMap.values()), otherTotal });
   })
   .post("/", zValidator("json", CreateTransaction$), async (c) => {
     const user = c.get("user")!;
